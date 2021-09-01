@@ -1,0 +1,229 @@
+---
+title: "Affective Signaling: Analysis"
+author: "Miklos Bognar"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+---
+
+# Load packages
+
+```{r load packages, warning = FALSE, message = FALSE}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, osfr, lme4, lmerTest, MuMIn, BayesFactor, DescTools, sjstats, car, broom, papaja, forcats)
+```
+
+# Load helper functions
+
+```{r load helper functions}
+source("../utils.R")
+```
+
+# Current version
+
+```{r}
+current_version = "affective_primeprobe_arousal_source_data"
+```
+
+# Load data
+```{r}
+# Reaction time
+processed_rt <- read_tsv(file.path(current_version, "data", "Processed", "aspp_arousal_rt_processed.tsv"))
+
+# Accuracy
+processed_acc <- read_tsv(file.path(current_version, "data", "Processed", "aspp_arousal_acc_processed.tsv"))
+```
+
+# Descriptive statistics of the sample size
+## Number of participants left after exclusion
+
+The number of participants is the same for the reaction time, the accuracy analyses as well.
+
+```{r}
+processed_rt %>% 
+  distinct(participant_id) %>% 
+  count()
+```
+
+## Number of responses after exclusion
+### For the reaction time analysis
+
+```{r}
+processed_rt %>%
+  count()
+```
+
+### For the accuracy analysis
+
+```{r}
+processed_acc %>% 
+  count()
+```
+
+## Age
+
+We calculated the following statistics based on the reaction time data file, but because it contains the same participants as the accuracy data files there should be no difference between the results.
+
+```{r}
+processed_rt %>% 
+  distinct(participant_id, .keep_all = T) %>% 
+  summarize(median_age = median(age, na.rm = T),
+            min_age = min(age, na.rm = T),
+            max_age = max(age, na.rm = T),
+            quart1_age = quantile(age, probs = 0.25, na.rm = T),
+            quart3_age = quantile(age, probs = 0.75, na.rm = T)) %>% 
+  knitr::kable(caption = "Age demographics")
+```
+
+## Gender
+
+```{r}
+processed_rt %>% 
+  distinct(participant_id, .keep_all = T) %>% 
+  group_by(gender) %>% 
+  count() %>% 
+  ungroup() %>% 
+  filter(gender %in% c("female", "male")) %>% 
+  mutate(prop = n / sum(n) * 100) %>% 
+  knitr::kable(caption = "Gender demographics")
+```
+
+## Education demographics
+
+```{r}
+processed_rt %>% 
+  distinct(participant_id, .keep_all = T) %>% 
+  group_by(education) %>% 
+  count() %>% 
+  ungroup() %>% 
+  filter(education %ni% c("blank", "refused")) %>% 
+  mutate(prop = n / sum(n) * 100) %>% 
+  knitr::kable(caption = "Education demographics")
+```
+
+# Investigating the effects of the words
+## Reaction time
+
+```{r}
+processed_rt %>% 
+  mutate(valency = case_when(is_prev_cong == 1 ~ "Neutral",
+                             is_prev_cong == 0 ~ "Negative")) %>%
+  group_by(word_content, valency) %>%
+  summarize(n_occurence = n(),
+            mean_rt = mean(rt)) %>% 
+  arrange(mean_rt) %>% 
+  ggplot() +
+  aes(x = word_content, y = mean_rt, color = valency) +
+  geom_point() +
+  labs(y = "Mean reaction time",
+       x = "Words",
+       color = "Valency of\nthe word") +
+  theme(axis.ticks = element_blank(),
+        axis.text.x = element_blank())
+```
+
+# Figures of affective-congruency sequence effect
+## For the reaction time data
+
+```{r}
+# Prepare data for plotting
+cse_plot_rt_data <- 
+  processed_rt %>% 
+  mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
+                                  is_prev_cong ==  1L ~ "Neutral"),
+         is_prev_cong = as_factor(is_prev_cong),
+         is_prev_cong = fct_relevel(is_prev_cong, c("Neutral", "Negative")),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent")) %>%
+  group_by(participant_id, is_prev_cong, is_congruent) %>% 
+  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
+  group_by(is_prev_cong, is_congruent) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+# Create the plot
+cse_plot_rt <- 
+  cse_plot_rt_data %>% 
+  ggplot() +
+  aes(x = is_prev_cong,
+                 y = mean_rt,
+                 shape = is_congruent,
+                 group = is_congruent) +
+  geom_path() +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(500, 900)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Valency of the previous word")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+  #papaja::theme_apa() +
+  theme(legend.position = c(0.85, 0.5),
+        axis.line = element_line(color = "black"))
+
+# Print the plot
+cse_plot_rt
+```
+
+#Save the figure
+
+#regression model on rt prediction
+
+```{r}
+#random intercept model without any predictors
+rt_random_model <- lmer(rt ~ 1 + (1|filename), data = processed_rt)
+
+#congruency effect linear model
+rt_random_intercept_model_congruency <- lmer(rt ~ is_congruent + (1|filename), data = processed_rt)
+rt_random_intercept_slope_model_congruency <- lmer(rt ~ is_congruent + (1+is_congruent|filename), data = processed_rt)
+
+#checking with random slope
+congruency_effect_summary <- summary(rt_random_intercept_model_congruency)
+congruency_effect_summary_random_slope <- summary(rt_random_intercept_slope_model_congruency)
+congruency_effect_summary
+```
+
+#Bayesian analysis of congruency main effect
+
+```{r}
+Bf(sd = congruency_effect_summary_random_slope$coefficients[4],
+   obtained = congruency_effect_summary_random_slope$coefficients[2]*-1,
+   dfdata = congruency_effect_summary_random_slope$coefficients[6],
+   meanoftheory = 0,
+   sdtheory = 73, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
+   dftheory = 10^10,
+   tail = 1)
+
+```
+
+#regression model for previous word valence and current trial congruency interaction
+
+```{r}
+#rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1+is_congruent|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
+rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
+
+interaction_effect_summary_random_slope <- summary(rt_random_intercept_slope_model_interaction)
+interaction_effect_summary_random_slope
+```
+
+#Bayesian analysis of interaction effect
+
+```{r}
+Bf(sd = interaction_effect_summary_random_slope$coefficients[8],
+   obtained = interaction_effect_summary_random_slope$coefficients[4]*-1,
+   dfdata = interaction_effect_summary_random_slope$coefficients[12],
+   meanoftheory = 0,
+   sdtheory = 15, # half of the congruency effect obtained in Weissman et al (2014)
+   dftheory = 10^10,
+   tail = 1)
+
+```
+
+
+#robustness region SDmin
+
+#robustness region SDmax

@@ -1,0 +1,310 @@
+---
+title: title: "Affective Signaling Prime-probe: Raw to Processed Data wrangling"
+author: "Miklos Bognar"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+---
+
+# Load packages
+
+```{r load packages}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, osfr, janitor, lubridate, purrrlyr)
+```
+
+# Load helper functions
+
+```{r load helper functions}
+source("../utils.R")
+```
+
+# load raw data 
+```{r}
+current_version = "affective_primeprobe_valence_source_data"
+raw <- read_tsv(file.path(current_version, "data","Raw", "aspp_valence_raw_data.tsv"))
+```
+
+
+# Check whether each participant completed the study
+## Number of trials for the primeprobe task
+
+** practice = 24
+** test = 388
+** total = 412
+
+```{r}
+raw %>% 
+  group_by(participant_id, is_practice) %>% 
+  count() %>% 
+  mutate(complete = case_when(is_practice == 1L & n == 24 ~ "complete",
+                              is_practice == 0L & n == 388 ~ "complete",
+                              TRUE ~ "incomplete")) %>% 
+  group_by(is_practice, complete) %>% 
+  count()
+```
+
+# Number of trials per block
+
+```{r}
+raw %>% 
+  #filter(participant_id == 1) %>% 
+  filter(is_practice == 0) %>% 
+  group_by(block, is_affective_word, is_primeprobe, is_blank) %>% 
+  summarize(n = n()) %>% 
+  group_by(block) %>% 
+  mutate(sum_n = sum(n))
+```
+
+# Exclude participants younger than 18 or older than 99
+
+```{r}
+raw <-
+  raw %>% 
+  mutate(age_drop = case_when(age < 18 ~ 1L,
+                              age > 99 ~ 1L,
+                              TRUE ~ 0L)) %>% 
+  filter(age_drop != 1L)
+```
+
+# Save practice trials to a separate df
+
+```{r save practice trials}
+practice <-
+  raw %>%
+  filter(is_practice == 1L)
+```
+
+# Save test trials to a separate df
+
+```{r save test trials}
+test <-
+  raw %>%
+  filter(is_practice == 0L)
+```
+
+# Delete the content of variables that are not meaningful for word trials
+
+```{r}
+test <-
+  test %>%
+  mutate(prime = case_when(is_affective_word == 1L | is_blank == 1L ~ NA_character_,
+                           TRUE ~ prime),
+         probe = case_when(is_affective_word == 1L | is_blank == 1L ~ NA_character_,
+                           TRUE ~ probe),
+         response_target = case_when(is_affective_word == 1L | is_blank == 1L ~ NA_character_,
+                           TRUE ~ response_target),
+         response_content = case_when(is_affective_word == 1L | is_blank == 1L ~ NA_character_,
+                           TRUE ~ response_content),
+         response_time = case_when(is_affective_word == 1L | is_blank == 1L ~ NA_real_,
+                           TRUE ~ response_time),
+         is_congruent = case_when(is_blank == 1L ~ NA_real_,
+                                  TRUE ~ is_congruent))
+```
+
+# Flagging first trials per block to be dropped
+
+Trial ids of the first trials per block:
+* 1. block: 24
+* 2. block: 121
+* 3. block: 218
+* 4. block: 315
+
+We will analyze only the trials following words except when the word was at the end of another block. We will analyze trials following first trial words.
+
+```{r}
+test <-
+  test %>% 
+  mutate(is_first_trial = case_when(trial_id %in% c(24, 121, 218, 315) ~ 1L,
+                                    TRUE ~ 0L))
+```
+
+# Add variable that stores wheter the previous trial is affective word
+
+```{r}
+test <-
+  test %>% 
+  mutate(is_prev_word = case_when(is_first_trial == 1 ~ NA_integer_,
+                                  is_first_trial != 1 & lag(is_affective_word) == 1L ~ 1L,
+                                  is_first_trial != 1 & lag(is_affective_word) == 0L ~ 0L))
+```
+
+# Add variable storing the congruency ( or valence) of the previous trial
+
+```{r previous valency}
+test <-
+  test %>% 
+  mutate(is_prev_cong = case_when(is_prev_word == 1L & lag(is_congruent) == 1L ~ 1L,
+                                  is_prev_word == 1L & lag(is_congruent) == 0L ~ 0L,
+                                  TRUE ~ NA_integer_))
+```
+
+# Add variables storing previous word content and id
+
+```{r previous valency}
+test <-
+  test %>% 
+  mutate(word_id = case_when(is_prev_word == 1L ~ lag(word_id),
+                             TRUE ~ word_id),
+         word_content = case_when(is_prev_word == 1L ~ lag(word_content),
+                             TRUE ~ word_content))
+```
+
+# Keeping only the trials that we use in the analysis
+
+```{r}
+test <-
+  test %>%
+  filter(is_prev_word == 1L)
+```
+
+# Drop variables that are not needed
+
+```{r}
+test <-
+  test %>%
+  select(-is_prev_word,
+         -is_first_trial,
+         -is_affective_word,
+         -is_blank,
+         -is_primeprobe,
+         -age_drop)
+```
+
+# Create correct response variable
+
+```{r}
+test <-
+  test %>%
+  mutate(is_correct = case_when(response_target == response_content ~ 1L,
+                                response_target != response_content ~ 0L,
+                                TRUE ~ NA_integer_))
+```
+
+# Calculate accuracy in each task for each participant
+
+Not including word trials!
+
+```{r calculate accuracy}
+participant_acc_drop <-
+  test %>%
+  group_by(participant_id) %>% 
+  summarise(prop = sum(is_correct, na.rm = TRUE)/ n() * 100,
+            drop_participant_acc = case_when(prop < 70 ~ 1L,
+                                             TRUE ~ 0L)) %>% 
+  select(participant_id, prop, drop_participant_acc)
+```
+
+```{r}
+test <-
+  test %>%
+  left_join(., participant_acc_drop, by = "participant_id")
+```
+
+# Calucalte the response time variable
+
+```{r calculate response time}
+test <-
+  test %>% 
+  mutate(rt = case_when(response_content != "TIMEOUT" ~ response_time - probe_onset,
+                        response_content == "TIMEOUT" ~ NA_real_))
+```
+
+# Exclude participants where all the trials are time out trials
+
+```{r}
+rt_all_missing <-
+  test %>% 
+  group_by(participant_id) %>% 
+  summarise(drop_all_missing_rt = case_when(all(is.na(rt)) ~ 1L,
+                                            TRUE ~ 0L))
+
+test <-
+  test %>% 
+  left_join(., rt_all_missing, by = "participant_id") %>% 
+  filter(drop_all_missing_rt == 0L) # Dropping participant
+```
+
+# Calucalte the mean response time and SD for exclusion
+
+```{r calculate mean response time}
+rt_participant_outliers <-
+  test %>% 
+  group_by(participant_id) %>% 
+  summarise(rt_participant_mean = mean(rt, na.rm = T),
+            rt_participant_sd = sd(rt, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(rt_grand_mean = mean(rt_participant_mean, na.rm = T),
+         rt_grand_sd = sd(rt_participant_mean, na.rm = T))
+
+rt_trial_outliers <-
+  test %>% 
+  ungroup() %>% 
+  group_by(participant_id, is_congruent, is_prev_cong) %>% 
+  summarise(rt_conditional_mean = mean(rt, na.rm = T),
+            rt_conditional_sd = sd(rt, na.rm = T))
+
+test <-
+  test %>% 
+  left_join(., rt_participant_outliers, by = "participant_id")
+
+test <-
+  test %>% 
+  left_join(., rt_trial_outliers, by = c("participant_id", "is_congruent", "is_prev_cong"))
+```
+
+# Create variable that stores whether a participant or a trial should be dropped based on the rt criteria
+
+```{r}
+test <-
+  test %>% 
+  group_by(participant_id) %>% 
+  mutate(drop_trial_rt = case_when(rt_conditional_mean + 2.5 * rt_conditional_sd < rt ~ 1L,
+                                   rt_conditional_mean - 2.5 * rt_conditional_sd > rt ~ 1L,
+                                   TRUE ~ 0L),
+         drop_participant_rt = case_when(rt_grand_mean + 2.5 * rt_grand_sd < rt_participant_mean ~ 1L,
+                                         rt_grand_mean - 2.5 * rt_grand_sd > rt_participant_mean ~ 1L,
+                                         TRUE ~ 0L))
+```
+
+# Participant level exclusion
+
+* 1: mean accuracy on their respective task was below 70%
+* 2: mean reaction time was more than 2.5 SDs away from the mean of their group
+
+```{r participant level exclusion}
+test <-
+  test %>% 
+  filter(drop_participant_acc == 0L,
+         drop_participant_rt  == 0L)
+```
+
+# Trial level exclusion for rt analysis
+
+* 1: Error trials
+* 2: Outliers, trials 2.5 SDs away from the conditional mean of the participant
+
+```{r trial level exclusion reaction time}
+response_rt_analysis <-
+  test %>% 
+  filter(is_correct            == 1L,   # 1 exclusion criteria
+         drop_trial_rt         == 0L)   # 2 exclusion criteria
+```
+
+# Trial level exclusion for error analysis
+
+* 1: Outliers, trials 2.5 SDs away from the conditional mean of the participant
+
+```{r trial level exclusion error}
+response_acc_analysis <-
+  test %>%
+  filter(drop_trial_rt         == 0L) # 1 exclusion criteria
+```
+
+
+# Save task to individual dataframes
+```{r}
+write_tsv(response_rt_analysis, file.path(current_version,"data","Processed", "aspp_valence_rt_processed.tsv"))
+
+write_tsv(response_acc_analysis, file.path(current_version,"data","Processed", "aspp_valence_acc_processed.tsv"))
+```
+

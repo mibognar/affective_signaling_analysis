@@ -1,0 +1,289 @@
+---
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+---
+
+# Load packages
+
+```{r load packages}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, osfr, janitor, purrrlyr, lubridate, rstudioapi)
+```
+
+# Load helper functions
+
+```{r load helper functions}
+source("../utils.R")
+```
+
+# Current version of the design
+
+```{r}
+current_version <- "global_core_flanker"
+```
+
+Currently we are working with the following version of the design: `r str_extract(current_version, "[^/]+$")`
+
+# Create local data structure
+
+```{r}
+local_data_pth <- file.path(current_version, "data")
+
+create_local_structure(local_data_pth)
+```
+
+# Remove local data
+
+Uncomment the following lines to remove the local Source data if needed.
+
+```{r}
+# local_data_pth <- file.path(current_version, "Data")
+
+# remove_local_data(local_data_pth)
+```
+
+We will read the source data from a private repository because the datafiles contain personal data.
+
+# Import and merge data
+
+```{r, echo=FALSE, import and merge data}
+# Read in datafiles
+source1 <- read_plus(pattern = ".csv$",
+                    path = file.path(current_version, "data","data1")) %>% 
+  janitor::clean_names()
+source2 <- read_plus(pattern = ".csv$",
+                    path = file.path(current_version, "data","data2")) %>% 
+  janitor::clean_names()
+
+# Read in demographic data
+demographics <- read_csv(file.path(current_version, "Data", "demographics.csv")) %>% 
+  janitor::clean_names()
+demographics2 <- read_csv(file.path(current_version, "Data", "demographics2.csv")) %>% 
+  janitor::clean_names()
+
+# Read in participant identifiers data
+participant_id <- read_csv(file.path(current_version, "Private", "participant-metadata.csv")) %>% 
+  janitor::clean_names()
+participant_id2 <- read_csv(file.path(current_version, "Private", "participant-metadata2.csv")) %>% 
+  janitor::clean_names()
+
+```
+
+## Merging participant and demographic data
+```{r}
+participant_id2 = participant_id2 %>% 
+  mutate(id = id +5000)
+demographics2 = demographics2 %>% 
+  mutate(id = id + 5000)
+source2 = source2 %>% 
+  mutate(id = id + 5000)
+
+#we exclude every duplicate responses
+#participant_id2 = participant_id2 %>% 
+ # mutate(user_id = paste(user_id,"00",sep = ""))
+
+participant_id = bind_rows(participant_id, participant_id2)
+demographics = bind_rows(demographics, demographics2)
+source = bind_rows(source1,source2)
+```
+
+# Participant level exclusion
+
+* 1: The recorded response is only a response coming from testing the program
+* 2: The unique identifier is missing
+* 3: There are multiple responses from one participant (we only keep the first)
+
+## Number of responses
+
+```{r number of responses}
+participant_id %>% 
+  count()
+```
+
+## Number of responses after the first exclusion
+
+How many participants do we have when we just remove testing responses.
+
+```{r}
+# UserIds to be deleted because they are responses from testing the program
+trial_response_id <- 
+  participant_id %>% 
+  filter(version == "inlab_test")
+
+test_participants <- 
+  participant_id %>% 
+  filter(user_id %in% c("v","66","666666","k","100","99"))
+
+participant_id<-
+  participant_id %>% 
+  filter(task == "flanker")
+
+participant_id<-
+  participant_id %>% 
+  filter(user_id %ni%  c("v","66","666666","k","100","99"))
+
+participant_id =
+  participant_id %>% 
+  filter(id != 333)
+
+demographics = 
+  demographics %>% 
+  filter(id !=333)
+
+source = 
+  source %>% 
+  filter(id !=333)
+
+participant_id %>% 
+  filter(user_id %ni% trial_response_id) %>% 
+  count()
+```
+
+## Number of responses after the second exclusion 
+
+How many participants do we have when we just remove testing responses and missing user ids.
+
+```{r number of responses after second exlusion}
+participant_id %>% 
+  filter(user_id %ni% trial_response_id) %>% 
+  filter(!is.na(user_id)) %>%
+  count()
+```
+
+## Number of responses after the third exclusion
+
+How many responses do we have after every exclusion.
+
+```{r number of responses after third exlusion}
+participant_id %>% 
+  filter(user_id %ni% trial_response_id) %>% 
+  filter(!is.na(user_id)) %>%
+  distinct(user_id, .keep_all = TRUE) %>% 
+  count()
+```
+
+### Checking the duplicate responses
+
+Number of responses per participant.
+
+```{r number of responses per participant}
+participant_id %>% 
+  group_by(user_id) %>% 
+  count()
+```
+
+Save participants who completed the task more than once.
+
+```{r save duplicates}
+participant_duplicate <- 
+  participant_id %>% 
+  filter(user_id %ni% trial_response_id) %>% 
+  filter(!is.na(user_id)) %>%
+  group_by(user_id) %>% 
+  count() %>% 
+  filter(n != 1)
+
+participant_duplicate %>% knitr::kable(caption = "Number of duplicate responses")
+```
+
+Show the descriptive data of the duplicate responses.
+
+```{r duplicate descriptive}
+participant_duplicate <- 
+  participant_id %>% 
+  filter(user_id %in% pull(participant_duplicate, user_id)) %>%
+  mutate(consent_time = as_datetime(consent_time / 1000, tz = "Europe/Prague")) %>% 
+  select(user_id,
+         loc,
+         id,
+         task,
+         consent_time)
+
+participant_duplicate %>%
+  knitr::kable(caption = "Duplicate responses")
+```
+
+Flag the datafile that will be dropped because it is a duplicate.
+
+```{r}
+participant_duplicate <- 
+  participant_duplicate %>% 
+  arrange(consent_time) %>% 
+  group_by(user_id) %>% 
+  mutate(duplicate_id = row_number()) %>% 
+  ungroup() %>% 
+  mutate(duplicate_drop = case_when(duplicate_id != 1 ~ 1L,
+                                    TRUE ~ NA_integer_))
+
+participant_id <-
+  participant_id %>% 
+  left_join(., select(participant_duplicate, user_id,id, duplicate_drop), by = c("id","user_id"))
+```
+
+# Join demographics data with responses
+
+```{r join demographic data}
+source <- 
+  source %>%
+  left_join(., demographics, by = c("id"))
+```
+
+# Join data with participant_id
+
+```{r join participant id}
+source <- 
+  source %>%
+  left_join(., participant_id, by = c("id"))
+```
+
+# Delete trial responses
+
+```{r delete trial responses}
+source <-
+  source %>% 
+  filter(user_id %ni% trial_response_id)
+```
+
+# Delete cases where the user_id is missing
+
+```{r delete empty userid}
+source <- 
+  source %>% 
+  filter(!is.na(user_id))
+```
+
+# Delete multiple responses
+
+We are keeping only the first response from the participants who participated in the experiment several times.
+
+```{r drop duplicates}
+source <- 
+  source %>% 
+  filter(is.na(duplicate_drop))
+```
+
+# Deidentify participants
+
+We need to remove any information that might identify the participants
+
+```{r deidentify participants}
+source <- 
+  source %>% 
+  select(-user_id, -debrief_general_comments)
+```
+
+# Rename "id" variable to "participant_id"
+
+```{r}
+source <- 
+  source %>% 
+  rename(participant_id = id)
+```
+
+# Save each task separately
+
+```{r save tasks}
+write_tsv(source, file.path(current_version, "data", "Raw", "flanker_raw_data.tsv"))
+```
+
+Final tsv files were uploaded to OSF manually.

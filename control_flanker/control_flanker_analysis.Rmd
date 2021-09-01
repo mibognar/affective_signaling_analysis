@@ -1,0 +1,341 @@
+---
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+output: html_document
+---
+
+# Load packages
+
+```{r load packages, warning = FALSE, message = FALSE}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, osfr, lme4, BayesFactor, DescTools, sjstats, car, broom, papaja)
+```
+
+# Load helper functions
+
+```{r load helper functions}
+source("../utils.R")
+```
+
+# Current version of the design
+
+```{r}
+current_version <- "global_core_flanker"
+```
+
+Currently we are working with the following version of the design: `r str_extract(current_version, "[^/]+$")`
+
+# Create local data structure
+
+```{r}
+local_data_pth <- file.path(current_version, "Data")
+
+create_local_structure(local_data_pth)
+```
+
+# Import data
+
+```{r, message = FALSE, warning = FALSE}
+# Reaction time
+processed_rt <- read_tsv(file.path(current_version, "data", "Processed", "flanker_processed_rt.tsv"))
+
+# Accuracy
+processed_acc <- read_tsv(file.path(current_version, "data", "Processed", "flanker_processed_acc.tsv"))
+
+# Accuracy exploratory
+#processed_acc_exp <- read_tsv(file.path(current_version, "Data", "Processed", "ppc_processed_acc_exploratory.tsv"))
+
+# Prior
+#prior <- read_tsv("prior.tsv")
+```
+
+# Descriptive statistics of the sample size
+## Number of participants left after exclusion
+
+The number of participants is the same for the reaction time, the accuracy, and the exploratory analyses as well.
+
+```{r}
+processed_rt %>% 
+  distinct(participant_id) %>% 
+  count()
+```
+
+## Number of responses after exclusion
+### For the reaction time analysis
+
+```{r}
+processed_rt %>%
+  count()
+```
+
+### For the accuracy analysis
+
+```{r}
+processed_acc %>% 
+  count()
+```
+
+### For the accuracy exploratory analysis
+
+```{r}
+processed_acc_exp %>% 
+  count()
+```
+
+## Age
+
+We calculated the following statistics based on the reaction time data file, but because it contains the same participants as the accuracy data, and the exploratory data files there should be no difference between the results.
+
+```{r}
+processed_rt %>% 
+  distinct(participant_id, .keep_all = T) %>% 
+  summarize(median_age = median(age, na.rm = T),
+            min_age = min(age, na.rm = T),
+            max_age = max(age, na.rm = T),
+            quart1_age = quantile(age, probs = 0.25, na.rm = T),
+            quart3_age = quantile(age, probs = 0.75, na.rm = T)) %>% 
+  knitr::kable(caption = "Age demographics")
+```
+
+## Gender
+
+```{r}
+processed_rt %>% 
+  distinct(participant_id, .keep_all = T) %>% 
+  group_by(gender) %>% 
+  count() %>% 
+  ungroup() %>% 
+  filter(gender %in% c("female", "male")) %>% 
+  mutate(prop = n / sum(n) * 100) %>% 
+  knitr::kable(caption = "Gender demographics")
+```
+
+## Education demographics
+
+```{r}
+processed_rt %>% 
+  distinct(participant_id, .keep_all = T) %>% 
+  group_by(education) %>% 
+  count() %>% 
+  ungroup() %>% 
+  filter(education %ni% c("blank", "refused")) %>% 
+  mutate(prop = n / sum(n) * 100) %>% 
+  knitr::kable(caption = "Education demographics")
+```
+
+# Number of different primeprobe feature pairs
+
+```{r}
+processed_rt %>% 
+  mutate(condition = case_when(is_prev_congruent == 0L & is_congruent == 0L ~ "ii",
+                               is_prev_congruent == 0L & is_congruent == 1L ~ "ic",
+                               is_prev_congruent == 1L & is_congruent == 0L ~ "ci",
+                               is_prev_congruent == 1L & is_congruent == 1L ~ "cc",
+                               TRUE ~ NA_character_)) %>% 
+  group_by(condition) %>% 
+  summarize(n = n(),
+           mean_rt = mean(rt),
+           sd_rt = sd(rt, na.rm = T),
+           se_rt = sd_rt / sqrt(n))
+```
+
+# Figures of CSE
+## For the reaction time data
+
+```{r}
+# Prepare data for plotting
+cse_plot_rt_data <- 
+  processed_rt %>% 
+  mutate(is_prev_congruent = case_when(is_prev_congruent ==  0L ~ "Incongruent",
+                                     is_prev_congruent ==  1L ~ "Congruent"),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent")) %>%
+  group_by(participant_id, is_prev_congruent, is_congruent) %>% 
+  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
+  group_by(is_prev_congruent, is_congruent) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+# Create the plot
+cse_plot_rt <- 
+  cse_plot_rt_data %>% 
+  ggplot() +
+  aes(x = is_prev_congruent,
+                 y = mean_rt,
+                 shape = is_congruent,
+                 group = is_congruent) +
+  geom_path() +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(550, 1000)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Congruency of the previous trial")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+  #papaja::theme_apa() +
+  theme(legend.position = c(0.85, 0.5),
+        axis.line = element_line(color = "black"))
+
+# Print the plot
+cse_plot_rt
+```
+
+## Saving the figure
+
+```{r}
+ggsave(file.path(current_version, "Figures", "ppc_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
+```
+
+## For the accuracy data
+
+```{r}
+# Prepare data for plotting
+cse_plot_acc_data <-
+  processed_acc %>% 
+  mutate(is_prev_congruent = case_when(is_prev_congruent ==  0L ~ "Incongruent",
+                                     is_prev_congruent ==  1L ~ "Congruent"),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent")) %>%
+  group_by(participant_id, is_prev_congruent, is_congruent) %>% 
+  summarise(participant_mean_acc = mean(is_correct, na.rm = T)) %>% 
+  group_by(is_prev_congruent, is_congruent) %>% 
+  summarise(N = n(),
+            mean_acc = mean(participant_mean_acc, na.rm = T),
+            sd_acc = sd(participant_mean_acc, na.rm = T),
+            se_acc = sd_acc / sqrt(N))
+
+# Create the plot
+cse_plot_acc <- 
+  cse_plot_acc_data %>%
+  ggplot() +
+  aes(x = is_prev_congruent,
+      y = mean_acc,
+      shape = is_congruent,
+      group = is_congruent) +
+  geom_path() +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width=.1) +
+  scale_shape_manual(values = c(4, 16)) + 
+  scale_y_continuous(limits = c(0.93, 1)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Congruency of the previous trial")+
+  ylab("Accuracy") +
+  guides(shape = guide_legend(title="Congruency of \n the current trial")) +
+#  papaja::theme_apa() +
+  theme(legend.position = c(0.85, 0.5),
+  axis.line = element_line(color = "black"))
+
+# Print the plot
+cse_plot_acc
+```
+
+## Saving the figure
+
+```{r}
+ggsave(file.path(current_version, "Figures", "ppc_acc_cse.png"), width = 14.4, height = 8, plot = last_plot())
+```
+
+## For the exploratory accuracy data
+
+```{r}
+# Prepare data for plotting
+cse_plot_acc_exp_data <- 
+  processed_acc_exp %>% 
+  mutate(is_prev_congruent = case_when(is_prev_congruent ==  0L ~ "Incongruent",
+                                     is_prev_congruent ==  1L ~ "Congruent"),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent")) %>%
+  group_by(participant_id, is_prev_congruent, is_congruent) %>% 
+  summarise(participant_mean_acc = mean(is_correct, na.rm = T)) %>% 
+  group_by(is_prev_congruent, is_congruent) %>% 
+  summarise(N = n(),
+            mean_acc = mean(participant_mean_acc, na.rm = T),
+            sd_acc = sd(participant_mean_acc, na.rm = T),
+            se_acc = sd_acc / sqrt(N))
+
+# Create the plot
+cse_plot_acc_exp <- 
+  cse_plot_acc_exp_data %>% 
+  ggplot() +
+  aes(x = is_prev_congruent,
+      y = mean_acc,
+      shape = is_congruent,
+      group = is_congruent) +
+  geom_path() +
+  geom_point(size = 2) +
+  geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width = .1) +
+  scale_shape_manual(values = c(4, 16)) + 
+  scale_y_continuous(limits = c(0.93, 1)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Congruency of the previous trial")+
+  ylab("Accuracy") +
+  guides(shape = guide_legend(title="Congruency of \n the current trial")) +
+  papaja::theme_apa() +
+  theme(legend.position = c(0.85, 0.5),
+        axis.line = element_line(color = "black"))
+
+# Print the plot
+cse_plot_acc_exp
+```
+
+## Saving the figure
+
+```{r}
+ggsave(file.path(current_version, "Figures", "ppc_acc_exp_cse.png"), width = 14.4, height = 8, plot = last_plot())
+```
+
+# Reaction time analyis
+## I. analysis: Testing whether the CSE was present in the different tasks
+### Preprocessing data
+
+
+### linear regression analysis
+```{r}
+rt_random_model <- lmer(rt ~ 1 + (1|filename), data = processed_rt)
+
+rt_random_intercept_model_no_interaction <- lmer(rt ~ is_prev_congruent + is_congruent + (1|filename), data = processed_rt)
+
+rt_random_intercept_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1|filename), data = processed_rt)
+random_intercept <- summary(rt_random_intercept_model)
+
+rt_random_intercept_slope_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1 + is_congruent|filename), data = processed_rt)
+
+summary(rt_random_intercept_slope_model)
+test_model = summary(rt_random_intercept_slope_model)
+```
+
+### Bayesian analysis of the linear regression model of congruency effect
+sd prior: Weissman (2014) congruency effect -> 53ms
+```{r}
+
+Bf(sd = test_model$coefficients[7],
+   obtained = test_model$coefficients[3]*-1,
+   dfdata = test_model$coefficients[11],
+   meanoftheory = 0,
+   sdtheory = 53,
+   dftheory = 10^10,
+   tail = 1)
+
+```
+
+
+### Bayesian analysis of linear regression model of sequential congruency effect (interaction between current and previous congruency)
+sd prior: Weissman (2014) congruency effect/2 -> 53/2 = 26.5
+```{r}
+
+Bf(sd = test_model$coefficients[8],
+   obtained = test_model$coefficients[4]*-1,
+   dfdata = test_model$coefficients[12],
+   meanoftheory = 0,
+   sdtheory = 300,
+   dftheory = 10^10,
+   tail = 1)
+
+```
+
+
+
