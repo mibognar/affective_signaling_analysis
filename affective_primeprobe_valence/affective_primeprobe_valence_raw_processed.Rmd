@@ -21,6 +21,29 @@ source("../utils.R")
 # load raw data 
 ```{r}
 current_version = "affective_primeprobe_valence_source_data"
+local_data_pth <- file.path(current_version, "data")
+```
+
+# Load raw data from OSF
+```{r}
+raw_folder = file.path(local_data_pth, "Raw")
+
+# These are for private nodes, public nodes doesn't need authentication
+token = readLines("../osf_token")
+osf_auth(token)
+
+myfile = osf_retrieve_node("v2sn4") %>%
+  osf_ls_files() %>% 
+  filter(name == "aspp_valence_raw_data.tsv")
+
+osf_download(myfile, raw_folder)
+
+raw = read_tsv(file.path(raw_folder, "aspp_valence_raw_data.tsv"))
+
+```
+
+# Load raw data from Local
+```{r}
 raw <- read_tsv(file.path(current_version, "data","Raw", "aspp_valence_raw_data.tsv"))
 ```
 

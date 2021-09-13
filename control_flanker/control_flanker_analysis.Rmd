@@ -166,19 +166,24 @@ cse_plot_rt <-
                  shape = is_congruent,
                  group = is_congruent) +
   geom_path() +
-  geom_point(size = 2) +
+  geom_point(size = 5) +
   geom_errorbar(aes(ymin = mean_rt - se_rt,
                     ymax = mean_rt + se_rt),
                 width = .1) +
   scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(550, 1000)) +
+  scale_y_continuous(limits = c(750, 950)) +
   scale_x_discrete(expand = c(1, 0)) +
   xlab("Congruency of the previous trial")+
   ylab("Reaction time") +
   guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
-  #papaja::theme_apa() +
-  theme(legend.position = c(0.85, 0.5),
-        axis.line = element_line(color = "black"))
+  papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.85),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )
 
 # Print the plot
 cse_plot_rt
@@ -187,7 +192,7 @@ cse_plot_rt
 ## Saving the figure
 
 ```{r}
-ggsave(file.path(current_version, "Figures", "ppc_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
+ggsave(file.path(current_version, "ppc_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
 ## For the accuracy data
@@ -297,6 +302,10 @@ ggsave(file.path(current_version, "Figures", "ppc_acc_exp_cse.png"), width = 14.
 ```{r}
 rt_random_model <- lmer(rt ~ 1 + (1|filename), data = processed_rt)
 
+ce_random_intercept_model = lmer(rt ~ is_congruent + (1|filename), data = processed_rt)
+
+congruency_effect = summary(ce_random_intercept_model)
+
 rt_random_intercept_model_no_interaction <- lmer(rt ~ is_prev_congruent + is_congruent + (1|filename), data = processed_rt)
 
 rt_random_intercept_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1|filename), data = processed_rt)
@@ -305,16 +314,16 @@ random_intercept <- summary(rt_random_intercept_model)
 rt_random_intercept_slope_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1 + is_congruent|filename), data = processed_rt)
 
 summary(rt_random_intercept_slope_model)
-test_model = summary(rt_random_intercept_slope_model)
+test_model = summary(rt_random_intercept_model)
 ```
 
 ### Bayesian analysis of the linear regression model of congruency effect
 sd prior: Weissman (2014) congruency effect -> 53ms
 ```{r}
 
-Bf(sd = test_model$coefficients[7],
-   obtained = test_model$coefficients[3]*-1,
-   dfdata = test_model$coefficients[11],
+Bf(sd = congruency_effect$coefficients[4],
+   obtained = congruency_effect$coefficients[2]*-1,
+   dfdata = congruency_effect$coefficients[6],
    meanoftheory = 0,
    sdtheory = 53,
    dftheory = 10^10,
@@ -331,7 +340,7 @@ Bf(sd = test_model$coefficients[8],
    obtained = test_model$coefficients[4]*-1,
    dfdata = test_model$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 300,
+   sdtheory = 26.5,
    dftheory = 10^10,
    tail = 1)
 

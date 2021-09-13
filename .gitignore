@@ -1,5 +1,9 @@
 *.csv
 *.png
 *.log
+*.Rproj
 *.tsv
+.Rhistory
+.RData
 osf_token
+.Rproj.user

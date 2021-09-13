@@ -32,9 +32,27 @@ local_data_pth <- file.path(current_version, "data")
 create_local_structure(local_data_pth)
 ```
 
+# Import data from OFS
+
+```{r}
+raw_folder = file.path(local_data_pth, "Raw")
+
+# These are for private nodes, public nodes doesn't need authentication
+token = readLines("../osf_token")
+osf_auth(token)
+
+myfile = osf_retrieve_node("e6waf") %>%
+  osf_ls_files() %>% 
+  filter(name == "flanker_raw_data.tsv")
+
+osf_download(myfile, raw_folder)
+
+raw = read_tsv(file.path(raw_folder, "flanker_raw_data.tsv"))
+
+```
 
 
-# Import data
+# Import data from local
 
 ```{r, echo=F}
 raw <- read_tsv(file.path(current_version, "data", "Raw", "flanker_raw_data.tsv"))
@@ -130,6 +148,11 @@ rt_all_missing <-
   group_by(participant_id) %>% 
   summarise(drop_all_missing_rt = case_when(all(is.na(rt)) ~ 1L,
                                             TRUE ~ 0L))
+rt_all_missing %>% 
+  group_by(participant_id, drop_all_missing_rt) %>%
+  count() %>%
+  group_by(drop_all_missing_rt) %>%
+  count()
 
 test <-
   test %>% 
@@ -199,6 +222,7 @@ test <-
   mutate(age_drop = case_when(age < 18 ~ 1L,
                               age > 99 ~ 1L,
                               TRUE ~ 0L)) %>% 
+
   filter(age_drop != 1L)
 ```
 
@@ -228,6 +252,12 @@ response_rt_analysis <-
          is_prev_correct       == 1L,   # 3 exclusion criteria
          drop_trial_rt         == 0L,   # 4 exclusion criteria
          is_prev_drop_trial_rt == 0L)   # 5 exclusion criteria
+```
+
+# Proportion of dropped trials
+```{r}
+trial_dropped_prop =  1 - (nrow(response_rt_analysis) / nrow(test)) 
+
 ```
 
 # Trial level exclusion for error analysis

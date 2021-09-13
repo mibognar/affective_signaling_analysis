@@ -44,9 +44,28 @@ Uncomment the following lines to remove the local Source data if needed.
 # remove_local_data(local_data_pth)
 ```
 
+# Import data from OFS
+
+```{r}
+raw_folder = file.path(local_data_pth, "Raw")
+
+# These are for private nodes, public nodes doesn't need authentication
+#token = readLines("../osf_token")
+#osf_auth(token)
+
+myfile = osf_retrieve_node("v2sn4") %>%
+  osf_ls_files() %>% 
+  filter(name == "prime_probe_global_raw_data.tsv")
+
+osf_download(myfile, raw_folder)
+
+raw = read_tsv(file.path(raw_folder, "prime_probe_global_raw_data.tsv"))
+
+```
 
 
-# Import data
+
+# Import data from local
 
 ```{r}
 raw <- read_tsv(file.path(current_version, "Data", "Raw", "prime_probe_global_raw_data.tsv"))
@@ -97,7 +116,17 @@ test <-
   mutate(prop = sum(is_correct) / n() * 100,
          drop_participant_acc = case_when(prop < 70 ~ 1L,
                                           TRUE ~ 0L))
+
+
+mean(test$prop)
 ```
+
+# Check how many participants has to be excluded on accuracy
+
+```{r calculate accuracy}
+test %>% group_by(participant_id, drop_participant_acc) %>% count() %>% group_by(drop_participant_acc) %>% count()
+```
+
 
 # Calucalte the response time variable
 
@@ -130,6 +159,8 @@ rt_all_missing <-
   summarise(drop_all_missing_rt = case_when(all(is.na(rt)) ~ 1L,
                                             TRUE ~ 0L))
 
+rt_all_missing %>% group_by(drop_all_missing_rt) %>% count()
+
 test <-
   test %>% 
   left_join(., rt_all_missing, by = "participant_id") %>% 
@@ -157,6 +188,7 @@ rt_participant_outliers <-
   ungroup() %>% 
   mutate(rt_grand_mean = mean(rt_participant_mean, na.rm = T),
          rt_grand_sd = sd(rt_participant_mean, na.rm = T))
+
 
 rt_trial_outliers <-
   test %>% 
@@ -190,6 +222,13 @@ test <-
                                          TRUE ~ 0L))
 ```
 
+# Check how many participants have to be excluded based on rt criteria
+```{r}
+test %>% group_by(participant_id, drop_participant_rt) %>% count() %>% group_by(drop_participant_rt) %>% count()
+
+```
+
+
 # Exclude participants younger than 18 or older than 99
 
 ```{r}
@@ -197,7 +236,10 @@ test <-
   test %>% 
   mutate(age_drop = case_when(age < 18 ~ 1L,
                               age > 99 ~ 1L,
-                              TRUE ~ 0L)) %>% 
+                              TRUE ~ 0L))
+test %>% group_by(participant_id, age_drop) %>% count() %>% group_by(age_drop) %>% count()
+ 
+test = test %>% 
   filter(age_drop != 1L)
 ```
 
@@ -211,6 +253,8 @@ test <-
   test %>% 
   filter(drop_participant_acc == 0L,
          drop_participant_rt  == 0L)
+
+test %>% group_by(participant_id, drop_participant_acc, drop_participant_rt) %>% count() %>% group_by(drop_participant_acc, drop_participant_rt) %>% count()
 ```
 
 # Trial level exclusion for rt analysis
@@ -227,6 +271,13 @@ response_rt_analysis <-
          is_prev_correct       == 1L,   # 3 exclusion criteria
          drop_trial_rt         == 0L,   # 4 exclusion criteria
          is_prev_drop_trial_rt == 0L)   # 5 exclusion criteria
+```
+
+```{r}
+#hardcoded proportion of dropped kept trials
+
+
+trial_dropped_prop =  1 - (nrow(response_rt_analysis) / nrow(test)) 
 ```
 
 # Trial level exclusion for error analysis
