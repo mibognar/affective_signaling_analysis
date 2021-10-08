@@ -128,10 +128,10 @@ processed_rt %>%
 # Prepare data for plotting
 cse_plot_rt_data <- 
   processed_rt %>% 
-  mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
-                                  is_prev_cong ==  1L ~ "Neutral"),
+  mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "High Arousal",
+                                  is_prev_cong ==  1L ~ "Low Arousal"),
          is_prev_cong = as_factor(is_prev_cong),
-         is_prev_cong = fct_relevel(is_prev_cong, c("Neutral", "Negative")),
+         is_prev_cong = fct_relevel(is_prev_cong, c("Low Arousal", "High Arousal")),
          is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
                                  is_congruent ==  1L ~ "Congruent")) %>%
   group_by(participant_id, is_prev_cong, is_congruent) %>% 
@@ -151,25 +151,33 @@ cse_plot_rt <-
                  shape = is_congruent,
                  group = is_congruent) +
   geom_path() +
-  geom_point(size = 2) +
+  geom_point(size = 5) +
   geom_errorbar(aes(ymin = mean_rt - se_rt,
                     ymax = mean_rt + se_rt),
                 width = .1) +
   scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(500, 900)) +
+  scale_y_continuous(limits = c(550, 800)) +
   scale_x_discrete(expand = c(1, 0)) +
-  xlab("Valency of the previous word")+
+  xlab("Arousal of the previous word")+
   ylab("Reaction time") +
   guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
-  #papaja::theme_apa() +
-  theme(legend.position = c(0.85, 0.5),
-        axis.line = element_line(color = "black"))
+  papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )
 
 # Print the plot
 cse_plot_rt
 ```
 
 #Save the figure
+```{r}
+ggsave(file.path(current_version, "prime_probe_arousal_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
+```
 
 #regression model on rt prediction
 
@@ -190,9 +198,9 @@ congruency_effect_summary
 #Bayesian analysis of congruency main effect
 
 ```{r}
-Bf(sd = congruency_effect_summary_random_slope$coefficients[4],
-   obtained = congruency_effect_summary_random_slope$coefficients[2]*-1,
-   dfdata = congruency_effect_summary_random_slope$coefficients[6],
+Bf(sd = congruency_effect_summary$coefficients[4],
+   obtained = congruency_effect_summary$coefficients[2]*-1,
+   dfdata = congruency_effect_summary$coefficients[6],
    meanoftheory = 0,
    sdtheory = 73, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
    dftheory = 10^10,
@@ -204,20 +212,20 @@ Bf(sd = congruency_effect_summary_random_slope$coefficients[4],
 
 ```{r}
 #rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1+is_congruent|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
-rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
+rt_random_intercept_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
 
-interaction_effect_summary_random_slope <- summary(rt_random_intercept_slope_model_interaction)
-interaction_effect_summary_random_slope
+interaction_effect_summary<- summary(rt_random_intercept_model_interaction)
+interaction_effect_summary
 ```
 
 #Bayesian analysis of interaction effect
 
 ```{r}
-Bf(sd = interaction_effect_summary_random_slope$coefficients[8],
-   obtained = interaction_effect_summary_random_slope$coefficients[4]*-1,
-   dfdata = interaction_effect_summary_random_slope$coefficients[12],
+Bf(sd = interaction_effect_summary$coefficients[8],
+   obtained = interaction_effect_summary$coefficients[4]*-1,
+   dfdata = interaction_effect_summary$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 15, # half of the congruency effect obtained in Weissman et al (2014)
+   sdtheory = 36.5,#1000,#36.5, # half of the congruency effect obtained in Weissman et al (2014)
    dftheory = 10^10,
    tail = 1)
 

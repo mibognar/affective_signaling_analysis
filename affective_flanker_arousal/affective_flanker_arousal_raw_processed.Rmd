@@ -298,6 +298,12 @@ test <-
          drop_participant_rt  == 0L)
 ```
 
+# How many were excluded?
+
+```{r}
+raw %>% distinct(participant_id) %>% nrow
+test %>% distinct(participant_id) %>% nrow
+```
 # Trial level exclusion for rt analysis
 
 * 1: Error trials
@@ -310,6 +316,9 @@ response_rt_analysis <-
          drop_trial_rt         == 0L)   # 2 exclusion criteria
 ```
 
+```{r}
+100*(1-(nrow(response_rt_analysis)/nrow(test)))
+```
 
 # Trial level exclusion for error analysis
 

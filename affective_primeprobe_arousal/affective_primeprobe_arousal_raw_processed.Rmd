@@ -278,6 +278,13 @@ test <-
          drop_participant_rt  == 0L)
 ```
 
+#Check how many participants were dropped
+
+```{r}
+raw %>% distinct(participant_id) %>% count()
+test %>% distinct(participant_id) %>% nrow()
+```
+
 # Trial level exclusion for rt analysis
 
 * 1: Error trials
@@ -288,6 +295,8 @@ response_rt_analysis <-
   test %>% 
   filter(is_correct            == 1L,   # 1 exclusion criteria
          drop_trial_rt         == 0L)   # 2 exclusion criteria
+
+(1-(nrow(response_rt_analysis)/nrow(test)))*100
 ```
 
 # Trial level exclusion for error analysis
