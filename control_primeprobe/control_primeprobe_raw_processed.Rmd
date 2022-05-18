@@ -124,7 +124,11 @@ mean(test$prop)
 # Check how many participants has to be excluded on accuracy
 
 ```{r calculate accuracy}
-test %>% group_by(participant_id, drop_participant_acc) %>% count() %>% group_by(drop_participant_acc) %>% count()
+test %>%
+  group_by(participant_id, drop_participant_acc) %>%
+  count() %>%
+  group_by(drop_participant_acc) %>%
+  count()
 ```
 
 
@@ -224,7 +228,11 @@ test <-
 
 # Check how many participants have to be excluded based on rt criteria
 ```{r}
-test %>% group_by(participant_id, drop_participant_rt) %>% count() %>% group_by(drop_participant_rt) %>% count()
+test %>%
+  group_by(participant_id, drop_participant_rt) %>%
+  count() %>%
+  group_by(drop_participant_rt) %>%
+  count()
 
 ```
 
@@ -292,19 +300,6 @@ response_acc_analysis <-
          is_prev_drop_trial_rt == 0L) # 3 exclusion criteria
 ```
 
-# Trial level exclusion for exploratory error analysis
-
-* 2: Outliers, trials 2.5 SDs away from the conditional mean of the participant
-* 3: Trials following outlier trials
-* 4: Trials following error trials (requested by reviewer)
-
-```{r trial level exclusion exploratory error}
-response_acc_exp_analysis <-
-  test %>% 
-  filter(drop_trial_rt         == 0L, # 2 exclusion criteria
-         is_prev_drop_trial_rt == 0L, # 3 exclusion criteria
-         is_prev_correct       == 1L) # 4 exclusion criteria
-```
 
 # Save task to individual dataframes
 
@@ -315,8 +310,6 @@ write_tsv(response_rt_analysis, file.path(current_version, "Data", "Processed", 
 # Saving data for the accuracy analysis
 write_tsv(response_acc_analysis, file.path(current_version, "Data", "Processed", "prime_probe_global_acc.tsv"))
 
-# Saving data for the exploratory accuracy analysis
-write_tsv(response_acc_exp_analysis, file.path(current_version, "Data", "Processed", "ppc_processed_acc_exploratory.tsv"))
 ```
 
 Final tsv files were uploaded to OSF manually.

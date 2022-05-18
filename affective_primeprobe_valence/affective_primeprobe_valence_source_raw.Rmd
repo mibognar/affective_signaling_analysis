@@ -59,10 +59,10 @@ demographics <- read_csv(file.path(local_data_pth, "demographics.csv")) %>%
   janitor::clean_names()
 
 # Read in participant identifiers data
-#participant_id <- read_csv(file.path(current_version,"private/b29_participant-metadata.csv")) %>% 
- # janitor::clean_names()
-participant_id <- read_csv(file.path(current_version,"private/participant-metadata.csv")) %>% 
+participant_id <- read_csv(file.path(current_version,"private/b29_participant-metadata.csv")) %>% 
   janitor::clean_names()
+#participant_id <- read_csv(file.path(current_version,"private/participant-metadata.csv")) %>% 
+ # janitor::clean_names()
 ```
 
 # Filter private data

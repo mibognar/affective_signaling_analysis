@@ -141,6 +141,31 @@ processed_rt %>%
            sd_rt = sd(rt, na.rm = T),
            se_rt = sd_rt / sqrt(n))
 ```
+## Aggregate data by conditions
+
+```{r}
+aggregate_rt_data = 
+  processed_rt %>% 
+  group_by(participant_id, is_congruent, is_prev_congruent, gender) %>% 
+  summarize(mean_rt = mean(rt))
+
+
+aggregate_rt_ce_data = 
+  processed_rt %>% 
+  group_by(participant_id, is_congruent, gender) %>% 
+  summarize(mean_rt = mean(rt)) %>% 
+  filter(gender %in% c("female","male"))
+
+aggregate_rt_ce_block_data =
+  processed_rt %>% 
+  group_by(participant_id, is_congruent, block ) %>% 
+  summarize(mean_rt = mean(rt)) %>% 
+  pivot_wider(names_from = is_congruent, values_from = mean_rt, names_prefix = "con_")
+
+write_csv(aggregate_rt_ce_block_data, file.path(current_version, "Data", "prime_probe_aggregate_rt_ce_block_data.tsv"))
+write_csv(aggregate_rt_data, file.path(current_version, "Data", "prime_probe_global_aggregate_rt.tsv"))
+write_csv(aggregate_rt_ce_data, file.path(current_version, "Data", "prime_probe_global_aggregate_rt_ce.tsv"))
+```
 
 # Figures of CSE
 ## For the reaction time data
@@ -321,7 +346,7 @@ Bf(sd = congruency_effect_model_summary$coefficients[4],
    obtained = congruency_effect_model_summary$coefficients[2]*-1,
    dfdata = congruency_effect_model_summary$coefficients[6],
    meanoftheory = 0,
-   sdtheory = 60,
+   sdtheory = 73,
    dftheory = 10^10,
    tail = 1)
 
@@ -333,14 +358,25 @@ Bf(sd = congruency_effect_model_summary$coefficients[4],
 ```{r}
 rt_random_intercept_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1|filename), data = processed_rt)
 random_intercept <- summary(rt_random_intercept_model)
-
-rt_random_intercept_slope_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1 + is_congruent|filename), data = processed_rt)
+rmse(cs_effect_model)
 
 cs_effect_model <- summary(rt_random_intercept_model)
 cs_effect_model
 ```
 
 ### cse bayes factor
+
+### Bayesian analysis for CE
+```{r}
+Bf(sd = cs_effect_model$coefficients[7],
+   obtained = cs_effect_model$coefficients[3]*-1,
+   dfdata = cs_effect_model$coefficients[11],
+   meanoftheory = 0,
+   sdtheory =73,
+   dftheory = 10^10,
+   tail = 1)
+```
+
 
 ### Bayesian analysis of linear regression model
 ```{r}
@@ -349,7 +385,7 @@ Bf(sd = cs_effect_model$coefficients[8],
    obtained = cs_effect_model$coefficients[4]*-1,
    dfdata = cs_effect_model$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 30, #0.07,#9298,
+   sdtheory = 36.5,#9298, #0.07,#9298,
    dftheory = 10^10,
    tail = 1)
 

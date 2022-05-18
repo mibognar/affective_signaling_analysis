@@ -232,8 +232,18 @@ test <-
 * 2: mean reaction time was more than 2.5 SDs away from the mean of their group
 
 ```{r participant level exclusion}
-test <-
-  test %>% 
+test %>% 
+  distinct(participant_id) %>% 
+  nrow()
+
+test %>% 
+  filter(drop_participant_acc == 0L,
+         drop_participant_rt  == 0L) %>% 
+  distinct(participant_id) %>% 
+ nrow()
+
+
+test = test %>% 
   filter(drop_participant_acc == 0L,
          drop_participant_rt  == 0L)
 ```
@@ -272,18 +282,11 @@ response_acc_analysis <-
          is_prev_drop_trial_rt == 0L) # 3 exclusion criteria
 ```
 
-# Trial level exclusion for exploratory error analysis
 
-* 2: Outliers, trials 2.5 SDs away from the conditional mean of the participant
-* 3: Trials following outlier trials
-* 4: Trials following error trials (requested by reviewer)
-
-```{r trial level exclusion exploratory error}
-response_acc_exp_analysis <-
-  test %>% 
-  filter(drop_trial_rt         == 0L, # 2 exclusion criteria
-         is_prev_drop_trial_rt == 0L, # 3 exclusion criteria
-         is_prev_correct       == 1L) # 4 exclusion criteria
+```{r}
+response_rt_analysis %>% 
+  distinct(participant_id) %>% 
+  nrow()
 ```
 
 # Save task to individual dataframes
@@ -294,9 +297,7 @@ write_tsv(response_rt_analysis, file.path(current_version, "data", "Processed", 
 
 # Saving data for the accuracy analysis
 write_tsv(response_acc_analysis, file.path(current_version, "data", "Processed", "flanker_processed_acc.tsv"))
-
-# Saving data for the exploratory accuracy analysis
-#write_tsv(response_acc_exp_analysis, file.path(current_version, "Data", "Processed", "ppc_processed_acc_exploratory.tsv"))
 ```
+
 
 Final tsv files were uploaded to OSF manually.

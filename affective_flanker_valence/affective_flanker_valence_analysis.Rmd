@@ -41,6 +41,8 @@ processed_rt <- read_tsv(file.path(current_version, "data", "Processed", "flanke
 # Accuracy
 processed_acc <- read_tsv(file.path(current_version, "data", "Processed", "flanker_valence_processed_acc.tsv"))
 
+
+processed_rt_nmin3 = read_tsv(file.path(current_version, "data", "Processed", "flanker_valence_processed_nmin3_rt.tsv"))
 # Accuracy exploratory
 #processed_acc_exp <- read_tsv(file.path(current_version, "Data", "Processed", "ppc_processed_acc_exploratory.tsv"))
 
@@ -133,6 +135,74 @@ processed_rt %>%
 ```
 
 # Figures of CSE
+## Exploratory plot for nmin3 analysis
+
+```{r}
+cse_plot_rt_data <- 
+  processed_rt_nmin3 %>% 
+  
+  mutate(is_nmin3_cong = case_when(is_nmin3_cong ==  0L ~ "Incongruent",
+                                  is_nmin3_cong ==  1L ~ "Congruent"),
+         is_nmin3_cong = as_factor(is_nmin3_cong),
+         is_nmin3_cong = fct_relevel(is_nmin3_cong, c("Congruent", "Incongruent")),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent"),
+         is_prev_cong = case_when(is_prev_cong == 0 ~ "Negative",
+                                  is_prev_cong == 1 ~ "Neutral")) %>%
+  group_by(participant_id, is_nmin3_cong, is_congruent, is_prev_cong) %>% 
+  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
+  mutate(word_congruency_group = case_when(is_congruent == "Congruent" & is_prev_cong == "Neutral" ~ 0,
+                                           is_congruent == "Incongruent" & is_prev_cong == "Neutral" ~ 1,
+                                           is_congruent == "Congruent" & is_prev_cong == "Negative" ~ 2,
+                                           is_congruent == "Incongruent" & is_prev_cong == "Negative" ~ 3,)) %>% 
+  group_by(is_nmin3_cong, is_congruent, is_prev_cong, word_congruency_group) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+
+cse_plot_rt <- 
+  cse_plot_rt_data %>% 
+  ggplot() +
+  aes(x = is_nmin3_cong,
+                 y = mean_rt,
+                 shape = is_congruent,
+                 group = word_congruency_group,
+                  color = is_prev_cong) +
+  geom_path() +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(750, 1200)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Congruency of the nmin3 trial")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+  #papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )
+
+cse_plot_rt
+
+```
+
+```{r}
+library(lmerTest)
+
+nmin3_model = lmer(rt ~ is_congruent*is_prev_cong + (1|filename),data = processed_rt)
+
+summary(nmin3_model)
+```
+
+
 ## For the reaction time data
 
 ```{r}
@@ -335,11 +405,21 @@ Bf(sd = test_model$coefficients[8],
    obtained = test_model$coefficients[4]*-1,
    dfdata = test_model$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 0.01,#26.5,
+   sdtheory = 26.5,#22.5#26.5,
    dftheory = 10^10,
    tail = 1)
 
 ```
 
 
+```{r}
 
+Bf(sd = test_model$coefficients[7],
+   obtained = test_model$coefficients[3]*-1,
+   dfdata = test_model$coefficients[11],
+   meanoftheory = 0,
+   sdtheory = 53,#0.45,#24421,#53,
+   dftheory = 10^10,
+   tail = 1)
+
+```

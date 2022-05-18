@@ -146,6 +146,7 @@ test <-
                                   TRUE ~ NA_integer_))
 ```
 
+
 # Add variables storing previous word content and id
 
 ```{r previous valency}
@@ -156,6 +157,7 @@ test <-
          word_content = case_when(is_prev_word == 1L ~ lag(word_content),
                              TRUE ~ word_content))
 ```
+
 
 # Keeping only the trials that we use in the analysis
 
@@ -187,6 +189,15 @@ test <-
                                 TRUE ~ NA_integer_))
 ```
 
+
+```{r}
+test = test %>% 
+  mutate(is_nmin3_cong = case_when(lag(is_congruent) == 1L ~ 1L,
+                                   TRUE ~ 0L),
+         is_nmin3_correct = case_when(lag(is_correct) == 1L ~ 1L,
+                                      TRUE ~ 0L))
+  
+```
 # Calculate accuracy in each task for each participant
 
 Not including word trials!
@@ -333,6 +344,14 @@ response_acc_analysis <-
 ```
 
 
+# Exp analysis for n-3 trials
+
+```{r}
+response_rt_nmin3_analysis =
+  response_rt_analysis %>% 
+  filter(is_nmin3_correct == 1L)
+```
+
 # Save task to individual dataframes
 
 ```{r save tasks}
@@ -342,8 +361,9 @@ write_tsv(response_rt_analysis, file.path(current_version, "data", "Processed", 
 # Saving data for the accuracy analysis
 write_tsv(response_acc_analysis, file.path(current_version, "data", "Processed", "flanker_valence_processed_acc.tsv"))
 
-# Saving data for the exploratory accuracy analysis
-#write_tsv(response_acc_exp_analysis, file.path(current_version, "Data", "Processed", "ppc_processed_acc_exploratory.tsv"))
+
+write_tsv(response_rt_nmin3_analysis, file.path(current_version, "data", "Processed", "flanker_valence_processed_nmin3_rt.tsv"))
+
 ```
 
 Final tsv files were uploaded to OSF manually.

@@ -73,7 +73,8 @@ Keep only rows from the current version of the experiment.
 ```{r}
 participant_id <-
   participant_id %>% 
-  filter(task == "affective_words_primeprobe")
+  filter(task == "affective_words_primeprobe") 
+
 ```
 
 # Participant level exclusion
@@ -97,7 +98,7 @@ How many participants do we have when we just remove testing responses.
 # UserIds to be deleted because they are responses from testing the program
 trial_response_id <- 
   participant_id %>% 
-  mutate(trial_drop = case_when(version %in% c("inlab_test") ~ 1L,
+  mutate(trial_drop = case_when(version %in% c("test","inlab_test") ~ 1L,
                                 user_id %in% c("a","sfafas","test","sa") ~ 1L,
                                 TRUE ~ 0L)) %>%
   filter(trial_drop == 1L) %>% 

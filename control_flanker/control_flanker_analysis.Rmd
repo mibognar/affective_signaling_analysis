@@ -137,6 +137,35 @@ processed_rt %>%
            sd_rt = sd(rt, na.rm = T),
            se_rt = sd_rt / sqrt(n))
 ```
+## Aggregate data
+
+```{r}
+aggregate_rt_data = 
+  processed_rt %>% 
+  group_by(participant_id, is_congruent, is_prev_congruent, gender) %>% 
+  summarize(mean_rt = mean(rt))
+
+aggregate_rt_ce_data = 
+  processed_rt %>% 
+  group_by(participant_id, is_congruent, gender) %>% 
+  summarize(mean_rt = mean(rt)) %>% 
+  filter(gender %in% c("female","male"))
+
+aggregate_rt_ce_data_pivot = 
+  processed_rt %>% 
+  group_by(participant_id, is_congruent, gender) %>% 
+  summarize(mean_rt = mean(rt)) %>% 
+  filter(gender %in% c("female","male")) %>% 
+  pivot_wider(names_from = is_congruent, values_from = mean_rt, names_prefix = "con_")
+
+write_csv(aggregate_rt_ce_data_pivot, file.path(current_version, "Data", "flanker_global_aggregate_rt_ce.tsv"))
+
+aggregate_rt_ce_block_data =
+  processed_rt %>% 
+  group_by(participant_id, is_congruent, block ) %>% 
+  summarize(mean_rt = mean(rt)) %>% 
+  pivot_wider(names_from = is_congruent, values_from = mean_rt, names_prefix = "con_")
+```
 
 # Figures of CSE
 ## For the reaction time data
@@ -244,54 +273,6 @@ cse_plot_acc
 ggsave(file.path(current_version, "Figures", "ppc_acc_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
-## For the exploratory accuracy data
-
-```{r}
-# Prepare data for plotting
-cse_plot_acc_exp_data <- 
-  processed_acc_exp %>% 
-  mutate(is_prev_congruent = case_when(is_prev_congruent ==  0L ~ "Incongruent",
-                                     is_prev_congruent ==  1L ~ "Congruent"),
-         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
-                                 is_congruent ==  1L ~ "Congruent")) %>%
-  group_by(participant_id, is_prev_congruent, is_congruent) %>% 
-  summarise(participant_mean_acc = mean(is_correct, na.rm = T)) %>% 
-  group_by(is_prev_congruent, is_congruent) %>% 
-  summarise(N = n(),
-            mean_acc = mean(participant_mean_acc, na.rm = T),
-            sd_acc = sd(participant_mean_acc, na.rm = T),
-            se_acc = sd_acc / sqrt(N))
-
-# Create the plot
-cse_plot_acc_exp <- 
-  cse_plot_acc_exp_data %>% 
-  ggplot() +
-  aes(x = is_prev_congruent,
-      y = mean_acc,
-      shape = is_congruent,
-      group = is_congruent) +
-  geom_path() +
-  geom_point(size = 2) +
-  geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width = .1) +
-  scale_shape_manual(values = c(4, 16)) + 
-  scale_y_continuous(limits = c(0.93, 1)) +
-  scale_x_discrete(expand = c(1, 0)) +
-  xlab("Congruency of the previous trial")+
-  ylab("Accuracy") +
-  guides(shape = guide_legend(title="Congruency of \n the current trial")) +
-  papaja::theme_apa() +
-  theme(legend.position = c(0.85, 0.5),
-        axis.line = element_line(color = "black"))
-
-# Print the plot
-cse_plot_acc_exp
-```
-
-## Saving the figure
-
-```{r}
-ggsave(file.path(current_version, "Figures", "ppc_acc_exp_cse.png"), width = 14.4, height = 8, plot = last_plot())
-```
 
 # Reaction time analyis
 ## I. analysis: Testing whether the CSE was present in the different tasks
@@ -331,6 +312,18 @@ Bf(sd = congruency_effect$coefficients[4],
 
 ```
 
+```{r}
+Bf(sd = test_model$coefficients[7],
+   obtained = test_model$coefficients[3]*-1,
+   dfdata = test_model$coefficients[11],
+   meanoftheory = 0,
+   sdtheory = 53, #0.094,#18180,#53,
+   dftheory = 10^10,
+   tail = 1)
+
+```
+
+
 
 ### Bayesian analysis of linear regression model of sequential congruency effect (interaction between current and previous congruency)
 sd prior: Weissman (2014) congruency effect/2 -> 53/2 = 26.5
@@ -340,7 +333,7 @@ Bf(sd = test_model$coefficients[8],
    obtained = test_model$coefficients[4]*-1,
    dfdata = test_model$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 26.5,
+   sdtheory = 26.5,#0.727,#3807,
    dftheory = 10^10,
    tail = 1)
 

@@ -184,6 +184,7 @@ participant_duplicate <-
   ungroup()
 
 participant_duplicate %>% knitr::kable(caption = "Number of duplicate responses")
+
 ```
 
 Show the descriptive data of the duplicate responses.
@@ -279,6 +280,14 @@ source <-
   source %>% 
   rename(participant_id = id)
 ```
+
+Count how many participants remained in the raw dataset
+```{r}
+source %>% 
+  distinct(participant_id, .keep_all = TRUE) %>% 
+  count()
+```
+
 
 # Save each task separately
 

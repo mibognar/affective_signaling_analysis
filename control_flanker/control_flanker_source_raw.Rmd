@@ -78,9 +78,6 @@ demographics2 = demographics2 %>%
 source2 = source2 %>% 
   mutate(id = id + 5000)
 
-#we exclude every duplicate responses
-#participant_id2 = participant_id2 %>% 
- # mutate(user_id = paste(user_id,"00",sep = ""))
 
 participant_id = bind_rows(participant_id, participant_id2)
 demographics = bind_rows(demographics, demographics2)
@@ -279,6 +276,15 @@ source <-
   source %>% 
   rename(participant_id = id)
 ```
+
+# count how many participants are kept
+```{r}
+source %>% 
+  distinct(participant_id) %>% 
+  count()
+
+```
+
 
 # Save each task separately
 

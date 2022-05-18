@@ -225,13 +225,20 @@ Bf(sd = interaction_effect_summary$coefficients[8],
    obtained = interaction_effect_summary$coefficients[4]*-1,
    dfdata = interaction_effect_summary$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 36.5,#1000,#36.5, # half of the congruency effect obtained in Weissman et al (2014)
+   sdtheory = 36.5,#4.09,#1000,#36.5, # half of the congruency effect obtained in Weissman et al (2014)
+   dftheory = 10^10,
+   tail = 1)
+
+```
+CE bf on the same linear regression
+```{r}
+Bf(sd = interaction_effect_summary$coefficients[6],
+   obtained = interaction_effect_summary$coefficients[2]*-1,
+   dfdata = interaction_effect_summary$coefficients[10],
+   meanoftheory = 0,
+   sdtheory = 73,#27231,#0.07,#73, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
    dftheory = 10^10,
    tail = 1)
 
 ```
 
-
-#robustness region SDmin
-
-#robustness region SDmax

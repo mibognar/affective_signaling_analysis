@@ -28,6 +28,7 @@ current_version = "affective_primeprobe_valence_source_data"
 ```{r}
 # Reaction time
 processed_rt <- read_tsv(file.path(current_version, "data", "Processed", "aspp_rt_processed.tsv"))
+processed_rt_exp <- read_tsv(file.path(current_version, "data", "Processed", "aspp_valence_rt_nmin3_processed.tsv"))
 
 # Accuracy
 processed_acc <- read_tsv(file.path(current_version, "data", "Processed", "aspp_valence_acc_processed.tsv"))
@@ -124,6 +125,64 @@ processed_rt %>%
 ```
 
 # Figures of affective-congruency sequence effect
+## Exploratory plot for nmin3 analysis
+
+```{r}
+cse_plot_rt_data <- 
+  processed_rt_exp %>% 
+  
+  mutate(is_nmin3_cong = case_when(is_nmin3_cong ==  0L ~ "Incongruent",
+                                  is_nmin3_cong ==  1L ~ "Congruent"),
+         is_nmin3_cong = as_factor(is_nmin3_cong),
+         is_nmin3_cong = fct_relevel(is_nmin3_cong, c("Congruent", "Incongruent")),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent")) %>%
+  group_by(participant_id, is_nmin3_cong, is_congruent, is_prev_cong) %>% 
+  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
+  mutate(word_congruency_group = case_when(is_congruent == "Congruent" & is_prev_cong == 1 ~ 0,
+                                           is_congruent == "Incongruent" & is_prev_cong == 1 ~ 1,
+                                           is_congruent == "Congruent" & is_prev_cong == 0 ~ 2,
+                                           is_congruent == "Incongruent" & is_prev_cong == 0 ~ 3,)) %>% 
+  group_by(is_nmin3_cong, is_congruent, is_prev_cong, word_congruency_group) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+
+cse_plot_rt <- 
+  cse_plot_rt_data %>% 
+  ggplot() +
+  aes(x = is_nmin3_cong,
+                 y = mean_rt,
+                 shape = is_congruent,
+                 group = word_congruency_group,
+                  color = is_prev_cong) +
+  geom_path() +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  #scale_shape_manual(values = c(4, 16)) +
+  #scale_y_continuous(limits = c(750, 1200)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Congruency of the nmin3 trial")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+  #papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )
+
+cse_plot_rt
+
+```
+
+
 ## For the reaction time data
 
 ```{r}
@@ -214,24 +273,37 @@ Bf(sd = congruency_effect_summary$coefficients[4],
 
 ```{r}
 #rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1+is_congruent|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
-rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
+rt_random_intercep_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
 
-interaction_effect_summary_random_slope <- summary(rt_random_intercept_slope_model_interaction)
-interaction_effect_summary_random_slope
+interaction_effect <- summary(rt_random_intercep_model_interaction)
+interaction_effect
 ```
 
 #Bayesian analysis of interaction effect
 
 ```{r}
-Bf(sd = interaction_effect_summary_random_slope$coefficients[8],
-   obtained = interaction_effect_summary_random_slope$coefficients[4]*-1,
-   dfdata = interaction_effect_summary_random_slope$coefficients[12],
+Bf(sd = interaction_effect$coefficients[8],
+   obtained = interaction_effect$coefficients[4]*-1,
+   dfdata = interaction_effect$coefficients[12],
    meanoftheory = 0,
    sdtheory = 36.5,#RR[3.8, infinite],36.5 - half of the congruency effect obtained in Weissman et al (2014)
    dftheory = 10^10,
    tail = 1)
 
 ```
+
+# Main effect in the same linear regression
+```{r}
+Bf(sd = interaction_effect$coefficients[6],
+   obtained = interaction_effect$coefficients[2]*-1,
+   dfdata = interaction_effect$coefficients[10],
+   meanoftheory = 0,
+   sdtheory = 73,#27938,#0.09, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
+   dftheory = 10^10,
+   tail = 1)
+
+```
+
 
 
 #robustness region SDmin

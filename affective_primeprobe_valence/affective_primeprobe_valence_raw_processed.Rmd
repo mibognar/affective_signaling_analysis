@@ -205,6 +205,20 @@ test <-
                                 TRUE ~ NA_integer_))
 ```
 
+#Exploratory analysis of nmin3 trials
+
+```{r}
+test = test %>% 
+  mutate(is_nmin3_cong = case_when(lag(is_congruent) == 1L ~ 1L,
+                                   TRUE ~ 0L),
+         is_nmin3_correct = case_when(lag(is_correct) == 1L ~ 1L,
+                                      TRUE ~ 0L))
+  
+  
+
+```
+
+
 # Calculate accuracy in each task for each participant
 
 Not including word trials!
@@ -348,9 +362,18 @@ raw_participants - remaining_participants
 ```
 
 
+# Exploratory exclusion of incorrect nmin3 trials
+```{r}
+response_rt_nmin3_analysis =
+  response_rt_analysis %>% 
+  filter(is_nmin3_correct == 1L)
+```
+
 
 # Save task to individual dataframes
 ```{r}
+write_tsv(response_rt_nmin3_analysis, file.path(current_version,"data","Processed", "aspp_valence_rt_nmin3_processed.tsv"))
+
 write_tsv(response_rt_analysis, file.path(current_version,"data","Processed", "aspp_valence_rt_processed.tsv"))
 
 write_tsv(response_acc_analysis, file.path(current_version,"data","Processed", "aspp_valence_acc_processed.tsv"))

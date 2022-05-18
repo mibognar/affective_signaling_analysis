@@ -29,6 +29,8 @@ Currently we are working with the following version of the design: `r str_extrac
 ```{r}
 local_data_pth <- file.path(current_version, "data")
 
+rerun_data_pth <-file.path(current_version, "data", "rerun")
+
 create_local_structure(local_data_pth)
 ```
 
@@ -50,6 +52,11 @@ We will read the source data from a private repository because the datafiles con
 # Read in datafiles
 source <- read_plus(pattern = ".csv$",
                     path = file.path(current_version, "data"),
+                    include = "2021-05") %>% 
+  janitor::clean_names()
+
+rerun_source <- read_plus(pattern = ".csv$",
+                    path = rerun_data_pth,
                     include = "2021") %>% 
   janitor::clean_names()
 
@@ -57,10 +64,33 @@ source <- read_plus(pattern = ".csv$",
 demographics <- read_csv(file.path(current_version, "Data", "demographics.csv")) %>% 
   janitor::clean_names()
 
+demographics_rerun <- read_csv(file.path(current_version, "Data","rerun", "demographics.csv" )) %>% 
+  janitor::clean_names()
+
 # Read in participant identifiers data
 participant_id <- read_csv(file.path(current_version, "Private", "participant-metadata.csv")) %>% 
   janitor::clean_names()
+
+participant_id_rerun <- read_csv(file.path(current_version, "Private","rerun", "participant-metadata.csv")) %>% 
+  janitor::clean_names()
 ```
+
+# merging first and rerun data
+
+```{r}
+participant_id_rerun = participant_id_rerun %>% 
+  mutate(id = id +5000)
+demographics_rerun = demographics_rerun %>% 
+  mutate(id = id + 5000)
+rerun_source = rerun_source %>% 
+  mutate(id = id + 5000)
+
+
+participant_id = bind_rows(participant_id, participant_id_rerun)
+demographics = bind_rows(demographics, demographics_rerun)
+source = bind_rows(source,rerun_source)
+```
+
 
 # Participant level exclusion
 
@@ -87,8 +117,8 @@ trial_response_id <-
 
 participant_id<-
   participant_id %>% 
-  filter(task == "affective_flanker") %>% 
-  filter(version == "flanker_valence")
+  filter(task == "affective_flanker") 
+
 
 participant_id %>% 
   filter(user_id %ni% trial_response_id) %>% 
@@ -101,7 +131,7 @@ How many participants do we have when we just remove testing responses and missi
 
 ```{r number of responses after second exlusion}
 participant_id %>% 
-  filter(version == "flanker_valence") %>% 
+  filter(task == "affective_flanker") %>% 
   filter(!is.na(user_id)) %>%
   count()
 ```
