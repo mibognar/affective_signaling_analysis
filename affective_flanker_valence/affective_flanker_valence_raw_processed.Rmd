@@ -32,7 +32,24 @@ local_data_pth <- file.path(current_version, "data")
 create_local_structure(local_data_pth)
 ```
 
+# Import data from OFS
 
+```{r}
+raw_folder = file.path(local_data_pth, "Raw")
+
+# These are for private nodes, public nodes doesn't need authentication
+#token = readLines("../osf_token")
+#osf_auth(token)
+
+myfile = osf_retrieve_node("e6waf") %>%
+  osf_ls_files() %>% 
+  filter(name == "flanker_valence_raw_data.tsv")
+
+osf_download(myfile, raw_folder)
+
+raw = read_tsv(file.path(raw_folder, "flanker_valence_raw_data.tsv"))
+
+```
 
 # Import data
 

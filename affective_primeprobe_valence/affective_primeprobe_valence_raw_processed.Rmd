@@ -23,6 +23,9 @@ source("../utils.R")
 ```{r}
 current_version = "affective_primeprobe_valence_source_data"
 local_data_pth <- file.path(current_version, "data")
+
+create_local_structure(local_data_pth)
+
 ```
 
 # Load raw data from OSF
