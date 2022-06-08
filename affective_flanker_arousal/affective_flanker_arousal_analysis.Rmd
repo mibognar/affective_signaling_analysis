@@ -428,7 +428,7 @@ cse_plot_3way_nmin4
 threeway_model = lmer(rt ~ is_congruent * n_min3_cong * n_min4_arousal + (1|filename), data = processed_rt_nmin3)
 summary(threeway_model)
 
-negative_processed = processed_rt_nmin3 %>% 
+negative_processed = model_data %>% 
   filter(n_min4_arousal == 0)
 
 cse_high_arousal_nmin4 = lmer(rt ~ is_congruent * n_min3_cong + (1|filename), data = negative_processed)
