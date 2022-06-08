@@ -27,7 +27,7 @@ Currently we are working with the following version of the design: `r str_extrac
 # Create local data structure
 
 ```{r}
-local_data_pth <- file.path(current_version, "Data")
+local_data_pth <- file.path(current_version, "data")
 
 create_local_structure(local_data_pth)
 ```
@@ -135,122 +135,7 @@ processed_rt %>%
 ```
 
 # Figures of CSE
-## Exploratory plot for nmin3 analysis
 
-```{r}
-cse_plot_rt_data <- 
-  processed_rt_nmin3 %>% 
-  
-  mutate(is_nmin3_cong = case_when(is_nmin3_cong ==  0L ~ "Incongruent",
-                                  is_nmin3_cong ==  1L ~ "Congruent"),
-         is_nmin3_cong = as_factor(is_nmin3_cong),
-         is_nmin3_cong = fct_relevel(is_nmin3_cong, c("Congruent", "Incongruent")),
-         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
-                                 is_congruent ==  1L ~ "Congruent"),
-         is_prev_cong = case_when(is_prev_cong == 0 ~ "Negative",
-                                  is_prev_cong == 1 ~ "Neutral")) %>%
-  group_by(participant_id, is_nmin3_cong, is_congruent, is_prev_cong) %>% 
-  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
-  mutate(word_congruency_group = case_when(is_congruent == "Congruent" & is_prev_cong == "Neutral" ~ 0,
-                                           is_congruent == "Incongruent" & is_prev_cong == "Neutral" ~ 1,
-                                           is_congruent == "Congruent" & is_prev_cong == "Negative" ~ 2,
-                                           is_congruent == "Incongruent" & is_prev_cong == "Negative" ~ 3,)) %>% 
-  group_by(is_nmin3_cong, is_congruent, is_prev_cong, word_congruency_group) %>% 
-  summarise(N = n(),
-            mean_rt = mean(participant_mean_rt, na.rm = T),
-            sd_rt = sd(participant_mean_rt, na.rm = T),
-            se_rt = sd_rt / sqrt(N))
-
-
-cse_plot_rt <- 
-  cse_plot_rt_data %>% 
-  ggplot() +
-  aes(x = is_nmin3_cong,
-                 y = mean_rt,
-                 group = is_congruent,
-                  color = is_congruent) +
-  geom_path() +
-  geom_point(size = 5) +
-  geom_errorbar(aes(ymin = mean_rt - se_rt,
-                    ymax = mean_rt + se_rt),
-                width = .1) +
-  scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(750, 1200)) +
-  scale_x_discrete(expand = c(1, 0)) +
-  xlab("Congruency of the nmin3 trial")+
-  ylab("Reaction time") +
-  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
-  #papaja::theme_apa() +
-  theme(legend.position = c(0.5,0.25),
-        legend.title = element_text(size= 26),
-        legend.text=element_text(size=24),
-        axis.line = element_line(color = "black",size=1),
-        axis.title = element_text(size=24),
-        axis.text = element_text(size=22)
-        )+ facet_grid(cols = vars(is_prev_cong))
-
-cse_plot_rt
-
-```
-
-nmin4 analysis
-```{r}
-cse_plot_rt_data_nmin4 <- 
-  processed_rt_nmin3 %>% 
-  filter(!is.na(n_min4_valence)) %>%
-  
-  mutate(is_nmin3_cong = case_when(is_nmin3_cong ==  0L ~ "Incongruent",
-                                  is_nmin3_cong ==  1L ~ "Congruent"),
-         is_nmin3_cong = as_factor(is_nmin3_cong),
-         is_nmin3_cong = fct_relevel(is_nmin3_cong, c("Congruent", "Incongruent")),
-         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
-                                 is_congruent ==  1L ~ "Congruent"),
-         n_min4_valence = case_when(n_min4_valence == 0 ~ "Negative",
-                                  n_min4_valence == 1 ~ "Neutral")) %>%
-  group_by(participant_id, is_nmin3_cong, is_congruent, n_min4_valence) %>% 
-  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
-  mutate(word_congruency_group = case_when(is_congruent == "Congruent" & n_min4_valence == "Neutral" ~ 0,
-                                           is_congruent == "Incongruent" & n_min4_valence == "Neutral" ~ 1,
-                                           is_congruent == "Congruent" & n_min4_valence == "Negative" ~ 2,
-                                           is_congruent == "Incongruent" & n_min4_valence == "Negative" ~ 3,)) %>% 
-  group_by(is_nmin3_cong, is_congruent, n_min4_valence, word_congruency_group) %>% 
-  summarise(N = n(),
-            mean_rt = mean(participant_mean_rt, na.rm = T),
-            sd_rt = sd(participant_mean_rt, na.rm = T),
-            se_rt = sd_rt / sqrt(N))
-
-
-cse_plot_rt_nmin4 <- 
-  cse_plot_rt_data_nmin4 %>% 
-  ggplot() +
-  aes(x = is_nmin3_cong,
-                 y = mean_rt,
-                 group = is_congruent,
-                  color = is_congruent) +
-  geom_path() +
-  geom_point(size = 5) +
-  geom_errorbar(aes(ymin = mean_rt - se_rt,
-                    ymax = mean_rt + se_rt),
-                width = .1) +
-  scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(750, 1200)) +
-  scale_x_discrete(expand = c(1, 0)) +
-  xlab("Congruency of the nmin3 trial")+
-  ylab("Reaction time") +
-  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
-  #papaja::theme_apa() +
-  theme(legend.position = c(0.5,0.25),
-        legend.title = element_text(size= 26),
-        legend.text=element_text(size=24),
-        axis.line = element_line(color = "black",size=1),
-        axis.title = element_text(size=24),
-        axis.text = element_text(size=22)
-        )+ 
-  facet_grid(cols = vars(n_min4_valence))
-
-cse_plot_rt_nmin4
-
-```
 
 ```{r}
 library(lmerTest)
@@ -367,54 +252,9 @@ cse_plot_acc
 ggsave(file.path(current_version, "Figures", "ppc_acc_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
-## For the exploratory accuracy data
 
-```{r}
-# Prepare data for plotting
-cse_plot_acc_exp_data <- 
-  processed_acc_exp %>% 
-  mutate(is_prev_congruent = case_when(is_prev_congruent ==  0L ~ "Incongruent",
-                                     is_prev_congruent ==  1L ~ "Congruent"),
-         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
-                                 is_congruent ==  1L ~ "Congruent")) %>%
-  group_by(participant_id, is_prev_congruent, is_congruent) %>% 
-  summarise(participant_mean_acc = mean(is_correct, na.rm = T)) %>% 
-  group_by(is_prev_congruent, is_congruent) %>% 
-  summarise(N = n(),
-            mean_acc = mean(participant_mean_acc, na.rm = T),
-            sd_acc = sd(participant_mean_acc, na.rm = T),
-            se_acc = sd_acc / sqrt(N))
 
-# Create the plot
-cse_plot_acc_exp <- 
-  cse_plot_acc_exp_data %>% 
-  ggplot() +
-  aes(x = is_prev_congruent,
-      y = mean_acc,
-      shape = is_congruent,
-      group = is_congruent) +
-  geom_path() +
-  geom_point(size = 2) +
-  geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width = .1) +
-  scale_shape_manual(values = c(4, 16)) + 
-  scale_y_continuous(limits = c(0.93, 1)) +
-  scale_x_discrete(expand = c(1, 0)) +
-  xlab("Congruency of the previous trial")+
-  ylab("Accuracy") +
-  guides(shape = guide_legend(title="Congruency of \n the current trial")) +
-  papaja::theme_apa() +
-  theme(legend.position = c(0.85, 0.5),
-        axis.line = element_line(color = "black"))
 
-# Print the plot
-cse_plot_acc_exp
-```
-
-## Saving the figure
-
-```{r}
-ggsave(file.path(current_version, "Figures", "ppc_acc_exp_cse.png"), width = 14.4, height = 8, plot = last_plot())
-```
 
 # Reaction time analyis
 ## I. analysis: Testing whether the CSE was present in the different tasks
@@ -480,4 +320,120 @@ Bf(sd = test_model$coefficients[7],
    dftheory = 10^10,
    tail = 1)
 
+```
+
+## Exploratory sequential effect analysis
+
+```{r}
+cse_plot_rt_data_cohen <- 
+  processed_rt_nmin3 %>% 
+  mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
+                                  is_prev_cong ==  1L ~ "Neutral"),
+         n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
+                                 n_min3_cong ==  1L ~ "Congruent"),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent")) %>%
+  group_by(participant_id, is_prev_cong, is_congruent, n_min3_cong) %>% 
+  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
+  group_by(is_prev_cong, is_congruent, n_min3_cong) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+# Create the plot
+cse_plot_rt_cohen <- 
+  cse_plot_rt_data_cohen %>% 
+  ggplot() +
+  aes(x = is_prev_cong,
+                 y = mean_rt,
+                 shape = is_congruent,
+                 group = is_congruent) +
+  geom_path() +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(750, 1200)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Valence of the previous word")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+ # papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        ) +
+  facet_grid(cols = vars(n_min3_cong))
+# Print the plot
+cse_plot_rt_cohen
+```
+
+
+```{r}
+cse_plot_3way_nmin4_data <- 
+  processed_rt_nmin3 %>% 
+  filter(!is.na(n_min4_valence)) %>% 
+  mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
+                                  is_prev_cong ==  1L ~ "Neutral"),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent"),
+n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
+                                 n_min3_cong ==  1L ~ "Congruent"),
+n_min4_valence = case_when(n_min4_valence ==  0L ~ "Negative",
+                                  n_min4_valence ==  1L ~ "Neutral"))%>%
+  
+  group_by(participant_id, is_congruent, n_min3_cong, n_min4_valence) %>% 
+  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
+  group_by(is_congruent, n_min3_cong, n_min4_valence) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+cse_plot_3way_nmin4 <- 
+  cse_plot_3way_nmin4_data %>% 
+  ggplot() +
+  aes(x = n_min3_cong,
+                 y = mean_rt,
+                 color = is_congruent,
+      
+                 group = is_congruent) +
+  geom_path() +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(750, 1200)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("nmin3 congruency")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "current congruency")) +
+  #papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )+
+  facet_grid(cols = vars(n_min4_valence))
+
+cse_plot_3way_nmin4
+```
+
+```{r}
+threeway_model = lmer(rt ~ is_congruent * n_min3_cong * n_min4_valence + (1|filename), data = processed_rt_nmin3)
+summary(threeway_model)
+
+negative_processed = processed_rt %>% 
+  filter(n_min4_valence == 0)
+
+cse_high_arousal_nmin4 = lmer(rt ~ is_congruent * n_min3_cong + (1|filename), data = negative_processed)
+summary(cse_high_arousal_nmin4)
 ```

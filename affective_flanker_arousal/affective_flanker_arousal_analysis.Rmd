@@ -27,7 +27,7 @@ Currently we are working with the following version of the design: `r str_extrac
 # Create local data structure
 
 ```{r}
-local_data_pth <- file.path(current_version, "Data")
+local_data_pth <- file.path(current_version, "data")
 
 create_local_structure(local_data_pth)
 ```
@@ -41,6 +41,8 @@ processed_rt <- read_tsv(file.path(current_version, "data", "Processed", "flanke
 # Accuracy
 processed_acc <- read_tsv(file.path(current_version, "data", "Processed", "flanker_arousal_processed_acc.tsv"))
 
+
+processed_rt_nmin3 <- read_tsv(file.path(current_version, "data", "Processed", "flanker_arousal_processed_rt_nmin3.tsv"))
 # Accuracy exploratory
 #processed_acc_exp <- read_tsv(file.path(current_version, "Data", "Processed", "ppc_processed_acc_exploratory.tsv"))
 
@@ -172,7 +174,7 @@ cse_plot_rt <-
   xlab("Arousal of the previous word")+
   ylab("Reaction time") +
   guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
-  papaja::theme_apa() +
+  #papaja::theme_apa() +
   theme(legend.position = c(0.5,0.25),
         legend.title = element_text(size= 26),
         legend.text=element_text(size=24),
@@ -310,14 +312,15 @@ Bf(sd = test_model$coefficients[7],
 
 ```{r}
 cse_plot_rt_data_cohen <- 
-  processed_rt %>% 
+  processed_rt_nmin3 %>% 
   mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "High",
                                   is_prev_cong ==  1L ~ "Low"),
-         is_prev_cong = as_factor(is_prev_cong),
-         n_min3_cong = as_factor(n_min3_cong),
+
          is_prev_cong = fct_relevel(is_prev_cong, c("Low", "High")),
          is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
-                                 is_congruent ==  1L ~ "Congruent")) %>%
+                                 is_congruent ==  1L ~ "Congruent"),
+         n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
+                                 n_min3_cong ==  1L ~ "Congruent")) %>%
   group_by(participant_id, is_prev_cong, is_congruent, n_min3_cong) %>% 
   summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
   group_by(is_prev_cong, is_congruent, n_min3_cong) %>% 
@@ -345,7 +348,7 @@ cse_plot_rt_cohen <-
   xlab("Arousal of the previous word")+
   ylab("Reaction time") +
   guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
-  papaja::theme_apa() +
+ # papaja::theme_apa() +
   theme(legend.position = c(0.5,0.25),
         legend.title = element_text(size= 26),
         legend.text=element_text(size=24),
@@ -356,37 +359,48 @@ cse_plot_rt_cohen <-
   facet_grid(cols = vars(n_min3_cong))
 # Print the plot
 cse_plot_rt_cohen
+```
+
+```{r}
+noga_cohen_effect_model = lmer(rt ~ is_congruent * is_prev_cong * n_min3_cong + (1|filename), data = processed_rt)
+summary(noga_cohen_effect_model)
+
+```
 
 
-cse_plot_rt_data_cohen2 <- 
-  processed_rt %>% 
+```{r}
+cse_plot_3way_nmin4_data <- 
+  processed_rt_nmin3 %>% 
+  filter(!is.na(n_min4_arousal)) %>% 
   mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "High",
                                   is_prev_cong ==  1L ~ "Low"),
-         is_prev_cong = as_factor(is_prev_cong),
-         n_min3_cong = as_factor(n_min3_cong),
+         
          is_prev_cong = fct_relevel(is_prev_cong, c("Low", "High")),
          
          is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
                                  is_congruent ==  1L ~ "Congruent"),
 n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
-                                 n_min3_cong ==  1L ~ "Congruent"))%>%
+                                 n_min3_cong ==  1L ~ "Congruent"),
+n_min4_arousal = case_when(n_min4_arousal ==  0L ~ "High",
+                                  n_min4_arousal ==  1L ~ "Low"),
+n_min4_arousal = fct_relevel(n_min4_arousal, c("Low", "High")),)%>%
   
-  group_by(participant_id, is_prev_cong,  n_min3_cong) %>% 
+  group_by(participant_id, is_congruent, n_min3_cong, n_min4_arousal) %>% 
   summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
-  group_by(is_prev_cong, n_min3_cong) %>% 
+  group_by(is_congruent, n_min3_cong, n_min4_arousal) %>% 
   summarise(N = n(),
             mean_rt = mean(participant_mean_rt, na.rm = T),
             sd_rt = sd(participant_mean_rt, na.rm = T),
             se_rt = sd_rt / sqrt(N))
 
-cse_plot_rt_cohen2 <- 
-  cse_plot_rt_data_cohen2 %>% 
+cse_plot_3way_nmin4 <- 
+  cse_plot_3way_nmin4_data %>% 
   ggplot() +
-  aes(x = is_prev_cong,
+  aes(x = n_min3_cong,
                  y = mean_rt,
-                 color = n_min3_cong,
+                 color = is_congruent,
       
-                 group = n_min3_cong) +
+                 group = is_congruent) +
   geom_path() +
   geom_point(size = 5) +
   geom_errorbar(aes(ymin = mean_rt - se_rt,
@@ -395,19 +409,29 @@ cse_plot_rt_cohen2 <-
   scale_shape_manual(values = c(4, 16)) +
   scale_y_continuous(limits = c(750, 1200)) +
   scale_x_discrete(expand = c(1, 0)) +
-  xlab("Arousal of the previous word")+
+  xlab("nmin3 congruency")+
   ylab("Reaction time") +
-  guides(shape = guide_legend(title = "Congruency of \n n-3 trial")) +
-  papaja::theme_apa() +
+  guides(shape = guide_legend(title = "current congruency")) +
+  #papaja::theme_apa() +
   theme(legend.position = c(0.5,0.25),
         legend.title = element_text(size= 26),
         legend.text=element_text(size=24),
         axis.line = element_line(color = "black",size=1),
         axis.title = element_text(size=24),
         axis.text = element_text(size=22)
-        )
+        )+
+  facet_grid(cols = vars(n_min4_arousal))
 
+cse_plot_3way_nmin4
+```
+```{r}
+threeway_model = lmer(rt ~ is_congruent * n_min3_cong * n_min4_arousal + (1|filename), data = processed_rt_nmin3)
+summary(threeway_model)
 
-cse_plot_rt_cohen2
+negative_processed = processed_rt_nmin3 %>% 
+  filter(n_min4_arousal == 0)
+
+cse_high_arousal_nmin4 = lmer(rt ~ is_congruent * n_min3_cong + (1|filename), data = negative_processed)
+summary(cse_high_arousal_nmin4)
 ```
 

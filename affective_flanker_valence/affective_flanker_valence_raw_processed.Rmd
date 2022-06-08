@@ -205,9 +205,7 @@ test <-
 
 ```{r}
 test = test %>% 
-  mutate(is_nmin3_cong = case_when(lag(is_congruent) == 1L ~ 1L,
-                                   TRUE ~ 0L),
-         is_nmin3_correct = case_when(lag(is_correct) == 1L ~ 1L,
+  mutate(is_nmin3_correct = case_when(lag(is_correct) == 1L ~ 1L,
                                       TRUE ~ 0L))
   
 ```
