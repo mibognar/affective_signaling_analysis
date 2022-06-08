@@ -136,6 +136,17 @@ test <-
   mutate(is_prev_cong = case_when(is_prev_word == 1L & lag(is_congruent) == 1L ~ 1L,
                                   is_prev_word == 1L & lag(is_congruent) == 0L ~ 0L,
                                   TRUE ~ NA_integer_))
+
+test = test %>% 
+  mutate(n_min3_cong = case_when(is_prev_word == 1L & lag(is_congruent, n = 3) == 1L ~ 1L,
+                                 is_prev_word == 1L & lag(is_congruent, n = 3) == 0L ~ 0L,
+                                 TRUE ~ NA_integer_))
+
+test = test %>% 
+  mutate(n_min4_arousal = case_when(is_prev_word == 1L & lag(is_congruent, n = 4) == 1L ~ 1L,
+                                 is_prev_word == 1L & lag(is_congruent, n = 4) == 0L ~ 0L,
+                                 TRUE ~ NA_integer_))
+
 ```
 
 # Add variables storing previous word content and id
@@ -178,6 +189,12 @@ test <-
   mutate(is_correct = case_when(response_target == response_content ~ 1L,
                                 response_target != response_content ~ 0L,
                                 TRUE ~ NA_integer_))
+```
+
+```{r}
+test = test %>% 
+  mutate(is_nmin3_correct = case_when(lag(is_correct) == 1L ~ 1L,
+                                      TRUE ~ 0L))
 ```
 
 # Calculate accuracy in each task for each participant
@@ -309,10 +326,20 @@ response_acc_analysis <-
   filter(drop_trial_rt         == 0L) # 1 exclusion criteria
 ```
 
+# Exp analysis for n-3 trials
+
+```{r}
+response_rt_nmin3_analysis =
+  response_rt_analysis %>% 
+  filter(is_nmin3_correct == 1L)
+```
+
 
 # Save task to individual dataframes
 ```{r}
 write_tsv(response_rt_analysis, file.path(current_version,"data","Processed", "aspp_arousal_rt_processed.tsv"))
+
+write_tsv(response_rt_nmin3_analysis, file.path(current_version,"data","Processed", "aspp_arousal_rt_processed_nmin3.tsv"))
 
 write_tsv(response_acc_analysis, file.path(current_version,"data","Processed", "aspp_arousal_acc_processed.tsv"))
 ```

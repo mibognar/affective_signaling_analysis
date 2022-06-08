@@ -161,6 +161,16 @@ test <-
   mutate(is_prev_cong = case_when(is_prev_word == 1L & lag(is_congruent) == 1L ~ 1L,
                                   is_prev_word == 1L & lag(is_congruent) == 0L ~ 0L,
                                   TRUE ~ NA_integer_))
+
+test = test %>% 
+  mutate(n_min3_cong = case_when(is_prev_word == 1L & lag(is_congruent, n = 3) == 1L ~ 1L,
+                                 is_prev_word == 1L & lag(is_congruent, n = 3) == 0L ~ 0L,
+                                 TRUE ~ NA_integer_))
+
+test = test %>% 
+  mutate(n_min4_valence = case_when(is_prev_word == 1L & lag(is_congruent, n = 4) == 1L ~ 1L,
+                                 is_prev_word == 1L & lag(is_congruent, n = 4) == 0L ~ 0L,
+                                 TRUE ~ NA_integer_))
 ```
 
 # Add variables storing previous word content and id
@@ -209,13 +219,8 @@ test <-
 
 ```{r}
 test = test %>% 
-  mutate(is_nmin3_cong = case_when(lag(is_congruent) == 1L ~ 1L,
-                                   TRUE ~ 0L),
-         is_nmin3_correct = case_when(lag(is_correct) == 1L ~ 1L,
+  mutate(is_nmin3_correct = case_when(lag(is_correct) == 1L ~ 1L,
                                       TRUE ~ 0L))
-  
-  
-
 ```
 
 
