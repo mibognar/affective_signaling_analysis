@@ -300,6 +300,55 @@ cse_plot_rt_cohen
 ```
 
 ```{r}
+cse_plot_rt_data_cohen2 <- 
+  processed_rt_nmin3 %>% 
+  mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
+                                  is_prev_cong ==  1L ~ "Neutral"),
+          is_prev_cong = fct_relevel(is_prev_cong, c("Neutral", "Negative")),
+         n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
+                                 n_min3_cong ==  1L ~ "Congruent"),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent")) %>%
+  group_by(participant_id, is_prev_cong, n_min3_cong) %>% 
+  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
+  group_by(is_prev_cong, n_min3_cong) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+cse_plot_rt_cohen2 <- 
+  cse_plot_rt_data_cohen2 %>% 
+  ggplot() +
+  aes(x = n_min3_cong,
+                 y = mean_rt,
+                 color = is_prev_cong,
+                 group = is_prev_cong) +
+  geom_path() +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(550, 800)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Valence of the previous word")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+ # papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )
+# Print the plot
+cse_plot_rt_cohen2
+```
+
+
+```{r}
 cse_plot_3way_nmin4_data <- 
   processed_rt_nmin3 %>% 
   filter(!is.na(n_min4_valence)) %>% 
