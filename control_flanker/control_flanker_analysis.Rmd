@@ -41,11 +41,7 @@ processed_rt <- read_tsv(file.path(current_version, "data", "Processed", "flanke
 # Accuracy
 processed_acc <- read_tsv(file.path(current_version, "data", "Processed", "flanker_processed_acc.tsv"))
 
-# Accuracy exploratory
-#processed_acc_exp <- read_tsv(file.path(current_version, "Data", "Processed", "ppc_processed_acc_exploratory.tsv"))
 
-# Prior
-#prior <- read_tsv("prior.tsv")
 ```
 
 # Descriptive statistics of the sample size
@@ -221,7 +217,7 @@ cse_plot_rt
 ## Saving the figure
 
 ```{r}
-ggsave(file.path(current_version, "ppc_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
+ggsave(file.path(current_version, "figures/ppc_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
 ## For the accuracy data
@@ -270,7 +266,7 @@ cse_plot_acc
 ## Saving the figure
 
 ```{r}
-ggsave(file.path(current_version, "Figures", "ppc_acc_cse.png"), width = 14.4, height = 8, plot = last_plot())
+ggsave(file.path(current_version, "figures", "ppc_acc_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
 
@@ -295,29 +291,18 @@ random_intercept <- summary(rt_random_intercept_model)
 rt_random_intercept_slope_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1 + is_congruent|filename), data = processed_rt)
 
 summary(rt_random_intercept_slope_model)
-test_model = summary(rt_random_intercept_model)
+test_model = summary(rt_random_intercept_slope_model)
 ```
 
 ### Bayesian analysis of the linear regression model of congruency effect
 sd prior: Weissman (2014) congruency effect -> 53ms
-```{r}
-
-Bf(sd = congruency_effect$coefficients[4],
-   obtained = congruency_effect$coefficients[2]*-1,
-   dfdata = congruency_effect$coefficients[6],
-   meanoftheory = 0,
-   sdtheory = 53,
-   dftheory = 10^10,
-   tail = 1)
-
-```
 
 ```{r}
 Bf(sd = test_model$coefficients[7],
    obtained = test_model$coefficients[3]*-1,
    dfdata = test_model$coefficients[11],
    meanoftheory = 0,
-   sdtheory = 53, #0.094,#18180,#53,
+   sdtheory = 18074, #0.16,#18074,#53,
    dftheory = 10^10,
    tail = 1)
 
@@ -333,7 +318,7 @@ Bf(sd = test_model$coefficients[8],
    obtained = test_model$coefficients[4]*-1,
    dfdata = test_model$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 26.5,#0.727,#3807,
+   sdtheory = 3831,#0.73,#3831,26.5
    dftheory = 10^10,
    tail = 1)
 

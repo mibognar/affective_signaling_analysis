@@ -43,11 +43,7 @@ processed_acc <- read_tsv(file.path(current_version, "data", "Processed", "flank
 
 
 processed_rt_nmin3 = read_tsv(file.path(current_version, "data", "Processed", "flanker_valence_processed_nmin3_rt.tsv"))
-# Accuracy exploratory
-#processed_acc_exp <- read_tsv(file.path(current_version, "Data", "Processed", "ppc_processed_acc_exploratory.tsv"))
 
-# Prior
-#prior <- read_tsv("prior.tsv")
 ```
 
 # Descriptive statistics of the sample size
@@ -200,7 +196,7 @@ cse_plot_rt
 ## Saving the figure
 
 ```{r}
-ggsave(file.path(current_version,"flanker_valence_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
+ggsave(file.path(current_version,"figures/flanker_valence_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
 ## For the accuracy data
@@ -274,10 +270,10 @@ rt_random_intercept_model_no_interaction <- lmer(rt ~ is_prev_congruent + is_con
 rt_random_intercept_model <- lmer(rt ~ is_prev_cong * is_congruent + (1|filename), data = processed_rt)
 random_intercept <- summary(rt_random_intercept_model)
 
-rt_random_intercept_slope_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1 + is_congruent|filename), data = processed_rt)
+rt_random_intercept_slope_model <- lmer(rt ~ is_prev_cong * is_congruent + (1 + is_congruent|filename), data = processed_rt)
 
-summary(rt_random_intercept_model)
-test_model = summary(rt_random_intercept_model)
+summary(rt_random_intercept_slope_model)
+test_model = summary(rt_random_intercept_slope_model)
 ```
 
 ### Bayesian analysis of the linear regression model of congruency effect
@@ -316,7 +312,7 @@ Bf(sd = test_model$coefficients[7],
    obtained = test_model$coefficients[3]*-1,
    dfdata = test_model$coefficients[11],
    meanoftheory = 0,
-   sdtheory = 53,#0.45,#24421,#53,
+   sdtheory = 24265,#0.77,#24421,#53,
    dftheory = 10^10,
    tail = 1)
 
@@ -372,6 +368,12 @@ cse_plot_rt_cohen <-
 # Print the plot
 cse_plot_rt_cohen
 
+ggsave(file.path(current_version,"figures/cse_plot_rt_cohen.png"), width = 14.4, height = 8, plot = last_plot())
+
+```
+
+
+```{r}
 cse_plot_rt_data_cohen2 <- 
   processed_rt_nmin3 %>% 
   mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
@@ -417,7 +419,12 @@ cse_plot_rt_cohen2 <-
         ) 
 
 cse_plot_rt_cohen2
+ggsave(file.path(current_version,"figures/cse_plot_rt_cohen2.png"), width = 14.4, height = 8, plot = last_plot())
 
+```
+
+
+```{r}
 cohen2_model = lmer(rt ~ n_min3_cong * is_prev_cong + (1|filename), data = processed_rt_nmin3)
 summary(cohen2_model)
 
@@ -475,6 +482,9 @@ cse_plot_3way_nmin4 <-
   facet_grid(cols = vars(n_min4_valence))
 
 cse_plot_3way_nmin4
+
+ggsave(file.path(current_version,"figures/cse_plot_3way_nmin4.png"), width = 14.4, height = 8, plot = last_plot())
+
 ```
 
 ```{r}

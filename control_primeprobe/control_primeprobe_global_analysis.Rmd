@@ -221,7 +221,7 @@ cse_plot_rt
 ## Saving the figure
 
 ```{r}
-ggsave(file.path(current_version, "prime_probe_global_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
+ggsave(file.path("figures/prime_probe_global_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
 ## For the accuracy data
@@ -270,57 +270,10 @@ cse_plot_acc
 ## Saving the figure
 
 ```{r}
-ggsave(file.path(current_version, "prime_probe_global_acc_cse.png"), width = 14.4, height = 8, plot = last_plot())
+ggsave(file.path("figures/prime_probe_global_acc_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
-## For the exploratory accuracy data
 
-```{r}
-# Prepare data for plotting
-cse_plot_acc_exp_data <- 
-  processed_acc_exp %>% 
-  mutate(is_prev_congruent = case_when(is_prev_congruent ==  0L ~ "Incongruent",
-                                     is_prev_congruent ==  1L ~ "Congruent"),
-         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
-                                 is_congruent ==  1L ~ "Congruent")) %>%
-  group_by(participant_id, is_prev_congruent, is_congruent) %>% 
-  summarise(participant_mean_acc = mean(is_correct, na.rm = T)) %>% 
-  group_by(is_prev_congruent, is_congruent) %>% 
-  summarise(N = n(),
-            mean_acc = mean(participant_mean_acc, na.rm = T),
-            sd_acc = sd(participant_mean_acc, na.rm = T),
-            se_acc = sd_acc / sqrt(N))
-
-# Create the plot
-cse_plot_acc_exp <- 
-  cse_plot_acc_exp_data %>% 
-  ggplot() +
-  aes(x = is_prev_congruent,
-      y = mean_acc,
-      shape = is_congruent,
-      group = is_congruent) +
-  geom_path() +
-  geom_point(size = 2) +
-  geom_errorbar(aes(ymin = mean_acc - se_acc, ymax = mean_acc + se_acc), width = .1) +
-  scale_shape_manual(values = c(4, 16)) + 
-  scale_y_continuous(limits = c(0.93, 1)) +
-  scale_x_discrete(expand = c(1, 0)) +
-  xlab("Congruency of the previous trial")+
-  ylab("Accuracy") +
-  guides(shape = guide_legend(title="Congruency of \n the current trial")) +
-  papaja::theme_apa() +
-  theme(legend.position = c(0.85, 0.5),
-        axis.line = element_line(color = "black"))
-
-# Print the plot
-cse_plot_acc_exp
-```
-
-## Saving the figure
-
-```{r}
-ggsave(file.path(current_version, "Figures", "ppc_acc_exp_cse.png"), width = 14.4, height = 8, plot = last_plot())
-```
 
 # Reaction time analyis
 ## I. analysis: Testing whether the CSE was present in the different tasks
@@ -333,7 +286,7 @@ library(lmerTest)
 rt_random_model <- lmer(rt ~ 1 + (1|filename), data = processed_rt)
 
 
-congruency_effect_model <- lmer(rt ~ is_congruent + (1|filename), data = processed_rt)
+congruency_effect_model <- lmer(rt ~ is_congruent + (1+is_congruent|filename), data = processed_rt)
 summary(congruency_effect_model)
 congruency_effect_model_summary = summary(congruency_effect_model)
 
@@ -346,7 +299,7 @@ Bf(sd = congruency_effect_model_summary$coefficients[4],
    obtained = congruency_effect_model_summary$coefficients[2]*-1,
    dfdata = congruency_effect_model_summary$coefficients[6],
    meanoftheory = 0,
-   sdtheory = 73,
+   sdtheory = 73, #28946,#0.18,#73,
    dftheory = 10^10,
    tail = 1)
 
@@ -356,11 +309,9 @@ Bf(sd = congruency_effect_model_summary$coefficients[4],
 
 ### linear regression analysis for interaction
 ```{r}
-rt_random_intercept_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1|filename), data = processed_rt)
-random_intercept <- summary(rt_random_intercept_model)
-rmse(cs_effect_model)
+rt_random_intercept_slope_model <- lmer(rt ~ is_prev_congruent * is_congruent + (1+is_congruent|filename), data = processed_rt)
 
-cs_effect_model <- summary(rt_random_intercept_model)
+cs_effect_model <- summary(rt_random_intercept_slope_model)
 cs_effect_model
 ```
 
@@ -372,7 +323,7 @@ Bf(sd = cs_effect_model$coefficients[7],
    obtained = cs_effect_model$coefficients[3]*-1,
    dfdata = cs_effect_model$coefficients[11],
    meanoftheory = 0,
-   sdtheory =73,
+   sdtheory =73, #24306,#0.14,#73,
    dftheory = 10^10,
    tail = 1)
 ```
@@ -385,7 +336,7 @@ Bf(sd = cs_effect_model$coefficients[8],
    obtained = cs_effect_model$coefficients[4]*-1,
    dfdata = cs_effect_model$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 36.5,#9298, #0.07,#9298,
+   sdtheory = 36.5,#36.5, #0.07,#9248,
    dftheory = 10^10,
    tail = 1)
 

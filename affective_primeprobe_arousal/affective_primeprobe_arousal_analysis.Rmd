@@ -178,7 +178,7 @@ cse_plot_rt
 
 #Save the figure
 ```{r}
-ggsave(file.path(current_version, "prime_probe_arousal_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
+ggsave(file.path(current_version, "figures/prime_probe_arousal_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
 #regression model on rt prediction
@@ -214,9 +214,9 @@ Bf(sd = congruency_effect_summary$coefficients[4],
 
 ```{r}
 #rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1+is_congruent|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
-rt_random_intercept_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
+rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1+is_congruent|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
 
-interaction_effect_summary<- summary(rt_random_intercept_model_interaction)
+interaction_effect_summary<- summary(rt_random_intercept_slope_model_interaction)
 interaction_effect_summary
 ```
 
@@ -227,7 +227,7 @@ Bf(sd = interaction_effect_summary$coefficients[8],
    obtained = interaction_effect_summary$coefficients[4]*-1,
    dfdata = interaction_effect_summary$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 36.5,#4.09,#1000,#36.5, # half of the congruency effect obtained in Weissman et al (2014)
+   sdtheory = 36.5,#3.94,#1000,#36.5, # half of the congruency effect obtained in Weissman et al (2014)
    dftheory = 10^10,
    tail = 1)
 
@@ -238,7 +238,7 @@ Bf(sd = interaction_effect_summary$coefficients[6],
    obtained = interaction_effect_summary$coefficients[2]*-1,
    dfdata = interaction_effect_summary$coefficients[10],
    meanoftheory = 0,
-   sdtheory = 73,#27231,#0.07,#73, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
+   sdtheory = 27009,#27009,#0.22,#73, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
    dftheory = 10^10,
    tail = 1)
 
@@ -296,7 +296,12 @@ cse_plot_rt_cohen <-
 # Print the plot
 cse_plot_rt_cohen
 
+ggsave(file.path(current_version, "figures/cse_plot_rt_cohen.png"), width = 14.4, height = 8, plot = last_plot())
 
+```
+
+
+```{r}
 cse_plot_rt_data_cohen2 <- 
   processed_rt_nmin3 %>% 
   mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "High",
@@ -344,7 +349,12 @@ cse_plot_rt_cohen2 <-
         ) 
 # Print the plot
 cse_plot_rt_cohen2
+
+ggsave(file.path(current_version, "figures/cse_plot_rt_cohen2.png"), width = 14.4, height = 8, plot = last_plot())
+
 ```
+
+
 ```{r}
 cse_plot_3way_nmin4_data <- 
   processed_rt_nmin3 %>% 
@@ -400,6 +410,9 @@ cse_plot_3way_nmin4 <-
   facet_grid(cols = vars(n_min4_arousal))
 
 cse_plot_3way_nmin4
+
+ggsave(file.path(current_version, "figures/cse_plot_3way_nmin4.png"), width = 14.4, height = 8, plot = last_plot())
+
 ```
 
 ```{r}

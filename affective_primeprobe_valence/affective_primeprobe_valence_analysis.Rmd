@@ -180,7 +180,7 @@ cse_plot_rt
 
 #Save the figure
 ```{r}
-ggsave(file.path(current_version, "prime_probe_valence_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
+ggsave(file.path(current_version, "figures/prime_probe_valence_rt_cse.png"), width = 14.4, height = 8, plot = last_plot())
 ```
 
 #regression model on rt prediction
@@ -215,10 +215,9 @@ Bf(sd = congruency_effect_summary$coefficients[4],
 #regression model for previous word valence and current trial congruency interaction
 
 ```{r}
-#rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1+is_congruent|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
-rt_random_intercep_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1|filename), data = processed_rt) # mindenkinek az interceptje máshol van. 
-
-interaction_effect <- summary(rt_random_intercep_model_interaction)
+rt_random_intercept_slope_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1+is_congruent|filename), data = processed_rt) 
+rt_random_intercep_model_interaction <- lmer(rt ~  is_congruent * is_prev_cong + (1|filename), data = processed_rt) 
+interaction_effect <- summary(rt_random_intercept_slope_model_interaction)
 interaction_effect
 ```
 
@@ -241,7 +240,7 @@ Bf(sd = interaction_effect$coefficients[6],
    obtained = interaction_effect$coefficients[2]*-1,
    dfdata = interaction_effect$coefficients[10],
    meanoftheory = 0,
-   sdtheory = 73,#27938,#0.09, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
+   sdtheory = 73,#27692,#0.35, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
    dftheory = 10^10,
    tail = 1)
 
@@ -298,6 +297,10 @@ cse_plot_rt_cohen <-
 # Print the plot
 cse_plot_rt_cohen
 ```
+```{r}
+ggsave(file.path(current_version, "figures/cse_plot_rt_cohen.png"), width = 14.4, height = 8, plot = last_plot())
+```
+
 
 ```{r}
 cse_plot_rt_data_cohen2 <- 
@@ -345,7 +348,10 @@ cse_plot_rt_cohen2 <-
         )
 # Print the plot
 cse_plot_rt_cohen2
+
+ggsave(file.path(current_version, "figures/cse_plot_rt_cohen2.png"), width = 14.4, height = 8, plot = last_plot())
 ```
+
 
 
 ```{r}
@@ -398,6 +404,9 @@ cse_plot_3way_nmin4 <-
   facet_grid(cols = vars(n_min4_valence))
 
 cse_plot_3way_nmin4
+
+ggsave(file.path(current_version, "figures/cse_plot_3way_nmin4.png"), width = 14.4, height = 8, plot = last_plot())
+
 ```
 
 ```{r}
