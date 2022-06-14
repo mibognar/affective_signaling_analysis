@@ -268,7 +268,7 @@ Bf(sd = test_model$coefficients[8],
    obtained = test_model$coefficients[4]*-1,
    dfdata = test_model$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 17,#1000000,#16,#26.5,
+   sdtheory = 26.5,#1000000,#16,#26.5,
    dftheory = 10^10,
    tail = 1)
 

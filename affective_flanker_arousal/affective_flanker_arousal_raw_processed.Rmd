@@ -285,7 +285,21 @@ rt_trial_outliers <-
   group_by(participant_id, is_congruent, is_prev_cong) %>% 
   summarise(rt_conditional_mean = mean(rt, na.rm = T),
             rt_conditional_sd = sd(rt, na.rm = T))
+```
+### Flanker lets participants respond as long as possible. We exclude every trial that is longer than 2000ms.
+```{r}
+test = 
+  test %>% 
+  ungroup() %>% 
+  mutate(above_2000 = case_when(rt>=2000 ~ 1L,
+                                TRUE ~ 0L))
 
+test = test %>% 
+  filter(above_2000 != 1)
+```
+
+
+```{r calculate mean response time}
 test <-
   test %>% 
   left_join(., rt_participant_outliers, by = "participant_id")

@@ -283,7 +283,21 @@ rt_participant_outliers <-
   ungroup() %>% 
   mutate(rt_grand_mean = mean(rt_participant_mean, na.rm = T),
          rt_grand_sd = sd(rt_participant_mean, na.rm = T))
+```
 
+### Flanker lets participants respond as long as possible. We exclude every trial that is longer than 2000ms.
+```{r}
+test = 
+  test %>% 
+  ungroup() %>% 
+  mutate(above_2000 = case_when(rt>=2000 ~ 1L,
+                                TRUE ~ 0L))
+
+test = test %>% 
+  filter(above_2000 != 1)
+```
+
+```{r calculate mean response time}
 rt_trial_outliers <-
   test %>% 
   ungroup() %>% 
