@@ -271,6 +271,25 @@ test <-
   filter(drop_all_missing_rt == 0L) # Dropping trials
 ```
 
+### Flanker lets participants respond as long as possible. We exclude every trial that is longer than 2000ms.
+```{r}
+
+original_trials = test
+
+test = 
+  test %>% 
+  ungroup() %>% 
+  mutate(above_2000 = case_when(rt>=2000 ~ 1L,
+                                TRUE ~ 0L))
+
+filtered_2000 = test %>% 
+  filter(above_2000 != 1)
+
+(1-nrow(filtered_2000)/nrow(test))*100
+
+test = test %>% 
+  filter(above_2000 != 1)
+```
 
 # Calucalte the mean response time and SD for exclusion
 
@@ -285,17 +304,7 @@ rt_participant_outliers <-
          rt_grand_sd = sd(rt_participant_mean, na.rm = T))
 ```
 
-### Flanker lets participants respond as long as possible. We exclude every trial that is longer than 2000ms.
-```{r}
-test = 
-  test %>% 
-  ungroup() %>% 
-  mutate(above_2000 = case_when(rt>=2000 ~ 1L,
-                                TRUE ~ 0L))
 
-test = test %>% 
-  filter(above_2000 != 1)
-```
 
 ```{r calculate mean response time}
 rt_trial_outliers <-
@@ -371,7 +380,7 @@ response_rt_analysis <-
 ```
 
 ```{r}
-100*(1-(nrow(response_rt_analysis)/nrow(test)))
+100*(1-(nrow(response_rt_analysis)/nrow(original_trials)))
 ```
 
 

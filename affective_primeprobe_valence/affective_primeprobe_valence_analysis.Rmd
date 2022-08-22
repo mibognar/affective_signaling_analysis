@@ -162,7 +162,7 @@ cse_plot_rt <-
   scale_shape_manual(values = c(4, 16)) +
   scale_y_continuous(limits = c(550, 800)) +
   scale_x_discrete(expand = c(1, 0)) +
-  xlab("Valency of the previous word")+
+  xlab("Valence of the previous word")+
   ylab("Reaction time") +
   guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
   papaja::theme_apa() +

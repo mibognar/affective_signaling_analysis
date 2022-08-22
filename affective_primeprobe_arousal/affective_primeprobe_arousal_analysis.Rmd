@@ -227,7 +227,7 @@ Bf(sd = interaction_effect_summary$coefficients[8],
    obtained = interaction_effect_summary$coefficients[4]*-1,
    dfdata = interaction_effect_summary$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 36.5,#3.94,#1000,#36.5, # half of the congruency effect obtained in Weissman et al (2014)
+   sdtheory = 36.5,#3.95,#1000,#36.5, # half of the congruency effect obtained in Weissman et al (2014)
    dftheory = 10^10,
    tail = 1)
 
@@ -238,7 +238,7 @@ Bf(sd = interaction_effect_summary$coefficients[6],
    obtained = interaction_effect_summary$coefficients[2]*-1,
    dfdata = interaction_effect_summary$coefficients[10],
    meanoftheory = 0,
-   sdtheory = 27009,#27009,#0.22,#73, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
+   sdtheory = 73,#27009,#0.22,#73, # 73ms is the congruency effect obtained in Weissman et al (2014) on prime probe
    dftheory = 10^10,
    tail = 1)
 

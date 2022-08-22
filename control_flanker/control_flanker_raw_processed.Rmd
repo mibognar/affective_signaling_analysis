@@ -170,6 +170,25 @@ test <-
   filter(!is.na(is_prev_congruent)) # 1 trial level exclusion criteria
 ```
 
+### Flanker lets participants respond as long as possible. We exclude every trial that is longer than 2000ms.
+```{r}
+original_trials = test
+
+test = 
+  test %>% 
+  ungroup() %>% 
+  mutate(above_2000 = case_when(rt>=2000 ~ 1L,
+                                TRUE ~ 0L))
+
+filtered_2000 = test %>% 
+  filter(above_2000 != 1)
+
+(1-nrow(filtered_2000)/nrow(test))*100
+
+test = test %>% 
+  filter(above_2000 != 1)
+```
+
 # Calucalte the mean response time and SD for exclusion
 
 ```{r calculate mean response time}
@@ -181,7 +200,11 @@ rt_participant_outliers <-
   ungroup() %>% 
   mutate(rt_grand_mean = mean(rt_participant_mean, na.rm = T),
          rt_grand_sd = sd(rt_participant_mean, na.rm = T))
+```
 
+
+
+```{r calculate mean response time}
 rt_trial_outliers <-
   test %>% 
   ungroup() %>% 
@@ -266,7 +289,7 @@ response_rt_analysis <-
 
 # Proportion of dropped trials
 ```{r}
-trial_dropped_prop =  1 - (nrow(response_rt_analysis) / nrow(test)) 
+trial_dropped_prop =  1 - (nrow(response_rt_analysis) / nrow(original_trials)) 
 
 ```
 
@@ -284,6 +307,10 @@ response_acc_analysis <-
 
 
 ```{r}
+original_trials %>% 
+  distinct(participant_id) %>% 
+  nrow
+
 response_rt_analysis %>% 
   distinct(participant_id) %>% 
   nrow()

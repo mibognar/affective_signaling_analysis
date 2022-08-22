@@ -176,9 +176,9 @@ cse_plot_rt <-
                     ymax = mean_rt + se_rt),
                 width = .1) +
   scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(750, 1200)) +
+  scale_y_continuous(limits = c(700, 1200)) +
   scale_x_discrete(expand = c(1, 0)) +
-  xlab("Valency of the previous word")+
+  xlab("Valence of the previous word")+
   ylab("Reaction time") +
   guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
   papaja::theme_apa() +
@@ -299,7 +299,7 @@ Bf(sd = test_model$coefficients[8],
    obtained = test_model$coefficients[4]*-1,
    dfdata = test_model$coefficients[12],
    meanoftheory = 0,
-   sdtheory = 26.5,#22.5#26.5,
+   sdtheory = 26.5,#9.8#26.5,
    dftheory = 10^10,
    tail = 1)
 
@@ -312,7 +312,7 @@ Bf(sd = test_model$coefficients[7],
    obtained = test_model$coefficients[3]*-1,
    dfdata = test_model$coefficients[11],
    meanoftheory = 0,
-   sdtheory = 24265,#0.77,#24421,#53,
+   sdtheory = 19636,#0.50,#19636,#53,
    dftheory = 10^10,
    tail = 1)
 
@@ -488,7 +488,7 @@ ggsave(file.path(current_version,"figures/cse_plot_3way_nmin4.png"), width = 14.
 ```
 
 ```{r}
-threeway_model = lmer(rt ~ is_congruent * n_min3_cong * n_min4_valence + (1|filename), data = processed_rt_nmin3)
+threeway_model = lmer(rt ~ is_congruent * n_min3_cong * n_min4_valence + (1+is_congruent|filename), data = processed_rt_nmin3)
 summary(threeway_model)
 
 negative_processed = processed_rt_nmin3 %>% 
