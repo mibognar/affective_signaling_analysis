@@ -267,6 +267,34 @@ test %>% group_by(participant_id, drop_participant_acc, drop_participant_rt) %>%
 
 # Trial level exclusion for rt analysis
 
+
+# Counting the exclusions
+
+```{r}
+test %>% 
+  filter(is_prev_correct == 0) %>% 
+  nrow()/nrow(test)
+```
+
+
+```{r}
+test %>% 
+  filter(is_correct == 0) %>% nrow()/nrow(test)
+```
+
+
+```{r}
+test %>% 
+  filter(drop_trial_rt == 1) %>% nrow()/nrow(test)
+```
+
+
+```{r}
+test %>% 
+  filter(is_prev_drop_trial_rt == 1) %>% nrow()/nrow(test)
+
+```
+
 * 2: Error trials
 * 3: Trials following error trials
 * 4: Outliers, trials 2.5 SDs away from the conditional mean of the participant
