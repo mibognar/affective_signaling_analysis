@@ -14,6 +14,7 @@ pacman::p_load(tidyverse, osfr, janitor, lubridate, purrrlyr)
 
 ```{r load helper functions}
 source("../utils.R")
+source("../outlier_detection.R")
 ```
 
 # Current version of the design
@@ -290,63 +291,27 @@ test = test %>%
 # Calucalte the mean response time and SD for exclusion
 
 ```{r calculate mean response time}
-rt_participant_outliers <-
-  test %>% 
-  group_by(participant_id) %>% 
-  summarise(rt_participant_mean = mean(rt, na.rm = T),
-            rt_participant_sd = sd(rt, na.rm = T)) %>% 
-  ungroup() %>% 
-  mutate(rt_grand_mean = mean(rt_participant_mean, na.rm = T),
-         rt_grand_sd = sd(rt_participant_mean, na.rm = T))
+unfiltered_test = test
+test = outlier_detection(unfiltered_test,trial_sd_cut = 2,participant_sd_cut = 9, participant_id, is_congruent, is_prev_cong)
+cohen_effect_analysis = outlier_detection(unfiltered_test, trial_sd_cut = 2,participant_sd_cut = 9, participant_id, is_congruent, is_prev_cong, n_min3_cong)
 
-rt_trial_outliers <-
-  test %>% 
-  ungroup() %>% 
-  group_by(participant_id, is_congruent, is_prev_cong) %>% 
-  summarise(rt_conditional_mean = mean(rt, na.rm = T),
-            rt_conditional_sd = sd(rt, na.rm = T))
+threeway_interaction_analysis = unfiltered_test %>% 
+  filter(!is.na(n_min4_arousal))
+threeway_interaction_analysis = outlier_detection(threeway_interaction_analysis, trial_sd_cut = 4,participant_sd_cut = 2.5, participant_id, is_congruent, is_prev_cong, n_min3_cong, n_min4_arousal)
+
 ```
 
 
-```{r calculate mean response time}
-test <-
-  test %>% 
-  left_join(., rt_participant_outliers, by = "participant_id")
 
-test <-
-  test %>% 
-  left_join(., rt_trial_outliers, by = c("participant_id", "is_congruent", "is_prev_cong"))
-```
-
-# Create variable that stores whether a participant or a trial should be dropped based on the rt criteria
-
-```{r}
-test <-
-  test %>% 
-  group_by(participant_id) %>% 
-  mutate(drop_trial_rt = case_when(rt_conditional_mean + 2.5 * rt_conditional_sd < rt ~ 1L,
-                                   rt_conditional_mean - 2.5 * rt_conditional_sd > rt ~ 1L,
-                                   TRUE ~ 0L),
-         drop_participant_rt = case_when(rt_grand_mean + 2.5 * rt_grand_sd < rt_participant_mean ~ 1L,
-                                         rt_grand_mean - 2.5 * rt_grand_sd > rt_participant_mean ~ 1L,
-                                         TRUE ~ 0L))
-```
-
-# Exclude participants younger than 18 or older than 99
-
-```{r}
-test <-
-  test %>% 
-  mutate(age_drop = case_when(age < 18 ~ 1L,
-                              age > 99 ~ 1L,
-                              TRUE ~ 0L)) %>% 
-  filter(age_drop != 1L)
-```
-
-# Participant level exclusion
+# Exclude participants and trials based on criteria
 
 * 1: mean accuracy on their respective task was below 70%
 * 2: mean reaction time was more than 2.5 SDs away from the mean of their group
+```{r}
+response_rt_analysis = global_exclusion(test)
+cohen_effect_analysis = global_exclusion(cohen_effect_analysis, T)
+threeway_interaction_analysis = global_exclusion(threeway_interaction_analysis, T)
+```
 
 ```{r participant level exclusion}
 test <-
@@ -415,10 +380,11 @@ response_rt_nmin3_analysis =
 # Saving data for the reaction time analysis
 write_tsv(response_rt_analysis, file.path(current_version, "data", "Processed", "flanker_arousal_processed_rt.tsv"))
 
-# Saving data for the accuracy analysis
-write_tsv(response_acc_analysis, file.path(current_version, "data", "Processed", "flanker_arousal_processed_acc.tsv"))
+write_tsv(cohen_effect_analysis, file.path(current_version, "data", "Processed", "flanker_arousal_cohen_effect_analysis.tsv"))
 
-write_tsv(response_rt_nmin3_analysis, file.path(current_version, "data", "Processed", "flanker_arousal_processed_rt_nmin3.tsv"))
+write_tsv(threeway_interaction_analysis, file.path(current_version, "data", "Processed", "flanker_arousal_threeway_interaction_analysis.tsv"))
+
+
 ```
 
 Final tsv files were uploaded to OSF manually.

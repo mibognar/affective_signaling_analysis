@@ -7,7 +7,7 @@ output: html_document
 
 ```{r load packages, warning = FALSE, message = FALSE}
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, osfr, lme4, BayesFactor, DescTools, sjstats, car, broom, papaja)
+pacman::p_load(tidyverse, osfr, lme4,lmerTest, BayesFactor, DescTools, sjstats, car, broom, papaja)
 ```
 
 # Load helper functions
@@ -42,7 +42,6 @@ processed_rt <- read_tsv(file.path(current_version, "data", "Processed", "flanke
 processed_acc <- read_tsv(file.path(current_version, "data", "Processed", "flanker_valence_processed_acc.tsv"))
 
 
-processed_rt_nmin3 = read_tsv(file.path(current_version, "data", "Processed", "flanker_valence_processed_nmin3_rt.tsv"))
 
 ```
 
@@ -130,16 +129,7 @@ processed_rt %>%
            se_rt = sd_rt / sqrt(n))
 ```
 
-# Figures of CSE
 
-
-```{r}
-library(lmerTest)
-
-nmin3_model = lmer(rt ~ is_congruent*is_prev_cong + (1|filename),data = processed_rt)
-
-summary(nmin3_model)
-```
 
 
 ## For the reaction time data
@@ -320,62 +310,10 @@ Bf(sd = test_model$coefficients[7],
 
 ## Exploratory sequential effect analysis
 
+
 ```{r}
 cse_plot_rt_data_cohen <- 
-  processed_rt_nmin3 %>% 
-  mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
-                                  is_prev_cong ==  1L ~ "Neutral"),
-         n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
-                                 n_min3_cong ==  1L ~ "Congruent"),
-         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
-                                 is_congruent ==  1L ~ "Congruent")) %>%
-  group_by(participant_id, is_prev_cong, is_congruent, n_min3_cong) %>% 
-  summarise(participant_mean_rt = mean(rt, na.rm = T)) %>% 
-  group_by(is_prev_cong, is_congruent, n_min3_cong) %>% 
-  summarise(N = n(),
-            mean_rt = mean(participant_mean_rt, na.rm = T),
-            sd_rt = sd(participant_mean_rt, na.rm = T),
-            se_rt = sd_rt / sqrt(N))
-
-# Create the plot
-cse_plot_rt_cohen <- 
-  cse_plot_rt_data_cohen %>% 
-  ggplot() +
-  aes(x = is_prev_cong,
-                 y = mean_rt,
-                 shape = is_congruent,
-                 group = is_congruent) +
-  geom_path() +
-  geom_point(size = 5) +
-  geom_errorbar(aes(ymin = mean_rt - se_rt,
-                    ymax = mean_rt + se_rt),
-                width = .1) +
-  scale_shape_manual(values = c(4, 16)) +
-  scale_y_continuous(limits = c(750, 1200)) +
-  scale_x_discrete(expand = c(1, 0)) +
-  xlab("Valence of the previous word")+
-  ylab("Reaction time") +
-  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
- # papaja::theme_apa() +
-  theme(legend.position = c(0.5,0.25),
-        legend.title = element_text(size= 26),
-        legend.text=element_text(size=24),
-        axis.line = element_line(color = "black",size=1),
-        axis.title = element_text(size=24),
-        axis.text = element_text(size=22)
-        ) +
-  facet_grid(cols = vars(n_min3_cong))
-# Print the plot
-cse_plot_rt_cohen
-
-ggsave(file.path(current_version,"figures/cse_plot_rt_cohen.png"), width = 14.4, height = 8, plot = last_plot())
-
-```
-
-
-```{r}
-cse_plot_rt_data_cohen2 <- 
-  processed_rt_nmin3 %>% 
+  cohen_effect_data %>% 
   mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
                                   is_prev_cong ==  1L ~ "Neutral"),
          n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
@@ -391,8 +329,8 @@ cse_plot_rt_data_cohen2 <-
             se_rt = sd_rt / sqrt(N))
 
 
-cse_plot_rt_cohen2 <- 
-  cse_plot_rt_data_cohen2 %>% 
+cse_plot_rt_cohen <- 
+  cse_plot_rt_data_cohen %>% 
   ggplot() +
   aes(x = is_prev_cong,
                  y = mean_rt,
@@ -409,7 +347,7 @@ cse_plot_rt_cohen2 <-
   xlab("Valence of the previous trial")+
   ylab("Reaction time of current trial") +
   guides(color = guide_legend(title = "Congruency of the n-3 trial")) +
- # papaja::theme_apa() +
+  papaja::theme_apa() +
   theme(legend.position = c(0.5,0.25),
         legend.title = element_text(size= 26),
         legend.text=element_text(size=24),
@@ -418,14 +356,19 @@ cse_plot_rt_cohen2 <-
         axis.text = element_text(size=22)
         ) 
 
-cse_plot_rt_cohen2
+cse_plot_rt_cohen
 ggsave(file.path(current_version,"figures/cse_plot_rt_cohen2.png"), width = 14.4, height = 8, plot = last_plot())
 
 ```
 
 
 ```{r}
-cohen2_model = lmer(rt ~ n_min3_cong * is_prev_cong + (1|filename), data = processed_rt_nmin3)
+
+# Cohen effect
+cohen_effect_data = read_tsv(file.path(current_version, "data", "Processed", "flanker_valence_cohen_effect.tsv"))
+
+
+cohen2_model = lmer(rt ~ n_min3_cong * is_prev_cong + (1+is_congruent|filename), data = cohen_effect_data)
 summary(cohen2_model)
 
 ```
@@ -433,8 +376,7 @@ summary(cohen2_model)
 
 ```{r}
 cse_plot_3way_nmin4_data <- 
-  processed_rt_nmin3 %>% 
-  filter(!is.na(n_min4_valence)) %>% 
+  threeway_effect_data %>% 
   mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
                                   is_prev_cong ==  1L ~ "Neutral"),
          is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
@@ -488,18 +430,84 @@ ggsave(file.path(current_version,"figures/cse_plot_3way_nmin4.png"), width = 14.
 ```
 
 ```{r}
-threeway_model = lmer(rt ~ is_congruent * n_min3_cong * n_min4_valence + (1+is_congruent|filename), data = processed_rt_nmin3)
-summary(threeway_model)
-
-negative_processed = processed_rt_nmin3 %>% 
-  filter(n_min4_valence == 0)
-
-neutral_processed = processed_rt_nmin3 %>% 
-  filter(n_min4_valence == 1)
-
-cse_negative_nmin4 = lmer(rt ~ is_congruent * n_min3_cong + (1|filename), data = negative_processed)
-summary(cse_negative_nmin4)
-
-cse_neutral_nmin4 = lmer(rt ~ is_congruent * n_min3_cong + (1|filename), data = neutral_processed)
-summary(cse_neutral_nmin4)
+# Threeway effect
+threeway_effect_data = read_tsv(file.path(current_version, "data", "Processed", "flanker_valence_threeway_interaction.tsv"))
 ```
+
+
+
+```{r}
+threeway_model = lmer(rt ~ is_congruent * n_min3_cong * n_min4_valence + (1+is_congruent|filename), data = threeway_effect_data)
+
+threeway_summary = summary(threeway_model)
+summary(threeway_model)
+```
+
+```{r}
+Bf(sd = threeway_summary$coefficients[16],
+   obtained = threeway_summary$coefficients[8],
+   dfdata = threeway_summary$coefficients[24],
+   meanoftheory = 0,
+   sdtheory = 20,#7.4,#94.5 RRB>3 = [7.4, 94.5]
+   dftheory = 10^10,
+   tail = 1)
+
+```
+
+
+
+```{r}
+myfitted = threeway_effect_data %>% 
+  mutate(predicted_rt=predict(threeway_model))
+
+
+cse_plot_3way_nmin4_data <- 
+  myfitted %>% 
+  mutate(is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
+                                  is_prev_cong ==  1L ~ "Neutral"),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent"),
+n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
+                                 n_min3_cong ==  1L ~ "Congruent"),
+n_min4_valence = case_when(n_min4_valence ==  0L ~ "Negative",
+                                  n_min4_valence ==  1L ~ "Neutral"))%>%
+  
+  group_by(participant_id,is_congruent, n_min3_cong, n_min4_valence) %>% 
+  summarise(participant_mean_rt = mean(predicted_rt, na.rm=T)) %>% 
+  group_by(is_congruent, n_min3_cong, n_min4_valence) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T))
+
+cse_plot_3way_nmin4 <- 
+  cse_plot_3way_nmin4_data %>% 
+  ggplot() +
+  aes(x = n_min3_cong,
+                 y = mean_rt,
+                 color = is_congruent,
+      
+                 group = is_congruent) +
+  geom_path() +
+  geom_point(size = 5) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(750, 1200)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("nmin3 congruency")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "current congruency")) +
+  #papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )+
+  facet_grid(cols = vars(n_min4_valence))
+cse_plot_3way_nmin4
+
+```
+
+```{r}
+ggsave(file.path(current_version,"figures/cse_plot_3way_nmin4.png"), width = 14.4, height = 8, plot = cse_plot_3way_nmin4)
+```
+

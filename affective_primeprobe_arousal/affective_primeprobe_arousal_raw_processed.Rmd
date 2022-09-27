@@ -16,6 +16,7 @@ pacman::p_load(tidyverse, osfr, janitor, lubridate, purrrlyr)
 
 ```{r load helper functions}
 source("../utils.R")
+source("../outlier_detection.R")
 ```
 
 # Create local data structure
@@ -269,66 +270,19 @@ test <-
 
 # Calucalte the mean response time and SD for exclusion
 
-```{r calculate mean response time}
-rt_participant_outliers <-
-  test %>% 
-  group_by(participant_id) %>% 
-  summarise(rt_participant_mean = mean(rt, na.rm = T),
-            rt_participant_sd = sd(rt, na.rm = T)) %>% 
-  ungroup() %>% 
-  mutate(rt_grand_mean = mean(rt_participant_mean, na.rm = T),
-         rt_grand_sd = sd(rt_participant_mean, na.rm = T))
-
-rt_trial_outliers <-
-  test %>% 
-  ungroup() %>% 
-  group_by(participant_id, is_congruent, is_prev_cong) %>% 
-  summarise(rt_conditional_mean = mean(rt, na.rm = T),
-            rt_conditional_sd = sd(rt, na.rm = T))
-
-test <-
-  test %>% 
-  left_join(., rt_participant_outliers, by = "participant_id")
-
-test <-
-  test %>% 
-  left_join(., rt_trial_outliers, by = c("participant_id", "is_congruent", "is_prev_cong"))
-```
-
-# Create variable that stores whether a participant or a trial should be dropped based on the rt criteria
-
 ```{r}
-test <-
-  test %>% 
-  group_by(participant_id) %>% 
-  mutate(drop_trial_rt = case_when(rt_conditional_mean + 2.5 * rt_conditional_sd < rt ~ 1L,
-                                   rt_conditional_mean - 2.5 * rt_conditional_sd > rt ~ 1L,
-                                   TRUE ~ 0L),
-         drop_participant_rt = case_when(rt_grand_mean + 2.5 * rt_grand_sd < rt_participant_mean ~ 1L,
-                                         rt_grand_mean - 2.5 * rt_grand_sd > rt_participant_mean ~ 1L,
-                                         TRUE ~ 0L))
+unfiltered_test = test
+test = outlier_detection(unfiltered_test,trial_sd_cut = 2.5, participant_sd_cut = 2.5, participant_id, is_congruent, is_prev_cong)
+
+cohen_effect_analysis = outlier_detection(unfiltered_test, trial_sd_cut = 2, participant_sd_cut = 9, participant_id, is_congruent, is_prev_cong, n_min3_cong)
+
+threeway_interaction_analysis = unfiltered_test %>% 
+  filter(!is.na(n_min4_arousal))
+threeway_interaction_analysis = outlier_detection(threeway_interaction_analysis, trial_sd_cut = 2, participant_sd_cut = 9, participant_id, is_congruent, is_prev_cong, n_min3_cong, n_min4_arousal)
+
 ```
 
-# Participant level exclusion
 
-* 1: mean accuracy on their respective task was below 70%
-* 2: mean reaction time was more than 2.5 SDs away from the mean of their group
-
-```{r participant level exclusion}
-test <-
-  test %>% 
-  filter(drop_participant_acc == 0L,
-         drop_participant_rt  == 0L)
-```
-
-#Check how many participants were dropped
-
-```{r}
-raw %>% distinct(participant_id) %>% count()
-test %>% distinct(participant_id) %>% nrow()
-```
-
-# Trial level exclusion for rt analysis
 
 # Counting the exclusions
 
@@ -343,44 +297,22 @@ test %>%
   filter(drop_trial_rt == 1) %>% nrow()/nrow(test)
 ```
 
-
-* 1: Error trials
-* 2: Outliers, trials 2.5 SDs away from the conditional mean of the participant
-
-```{r trial level exclusion reaction time}
-response_rt_analysis <-
-  test %>% 
-  filter(is_correct            == 1L,   # 1 exclusion criteria
-         drop_trial_rt         == 0L)   # 2 exclusion criteria
-
-(1-(nrow(response_rt_analysis)/nrow(test)))*100
-```
-
-# Trial level exclusion for error analysis
-
-* 1: Outliers, trials 2.5 SDs away from the conditional mean of the participant
-
-```{r trial level exclusion error}
-response_acc_analysis <-
-  test %>%
-  filter(drop_trial_rt         == 0L) # 1 exclusion criteria
-```
-
-# Exp analysis for n-3 trials
+# Exclusions with helper function
 
 ```{r}
-response_rt_nmin3_analysis =
-  response_rt_analysis %>% 
-  filter(is_nmin3_correct == 1L)
+response_rt_analysis = global_exclusion(test, F)
+cohen_effect_analysis = global_exclusion(cohen_effect_analysis, T)
+threeway_interaction_analysis = global_exclusion(threeway_interaction_analysis, T)
 ```
+
 
 
 # Save task to individual dataframes
 ```{r}
 write_tsv(response_rt_analysis, file.path(current_version,"data","Processed", "aspp_arousal_rt_processed.tsv"))
 
-write_tsv(response_rt_nmin3_analysis, file.path(current_version,"data","Processed", "aspp_arousal_rt_processed_nmin3.tsv"))
+write_tsv(cohen_effect_analysis, file.path(current_version,"data","Processed", "aspp_arousal_rt_processed_cohen_effect.tsv"))
 
-write_tsv(response_acc_analysis, file.path(current_version,"data","Processed", "aspp_arousal_acc_processed.tsv"))
+write_tsv(threeway_interaction_analysis, file.path(current_version,"data","Processed", "aspp_arousal_threeway_interaction.tsv"))
 ```
 
