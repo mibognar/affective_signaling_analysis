@@ -146,7 +146,7 @@ test <-
 rt_all_missing <-
   test %>% 
   group_by(participant_id) %>% 
-  summarise(drop_all_missing_rt = case_when(all(is.na(rt)) ~ 1L,
+  summarise(drop_all_missing_rt = case_when(all(is.na(rt), na.rm = T) ~ 1L,
                                             TRUE ~ 0L))
 rt_all_missing %>% 
   group_by(participant_id, drop_all_missing_rt) %>%
@@ -180,6 +180,12 @@ test =
   mutate(above_2000 = case_when(rt>=2000 ~ 1L,
                                 TRUE ~ 0L))
 
+test %>% 
+  filter(above_2000==1) %>%nrow()/nrow(test)
+```
+
+
+```{r}
 filtered_2000 = test %>% 
   filter(above_2000 != 1)
 

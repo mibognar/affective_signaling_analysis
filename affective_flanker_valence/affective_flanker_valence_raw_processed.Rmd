@@ -286,6 +286,7 @@ test =
 filtered_2000 = test %>% 
   filter(above_2000 != 1)
 
+
 (1-nrow(filtered_2000)/nrow(test))*100
 
 test = test %>% 
@@ -328,8 +329,13 @@ test <-
 # Counting the exclusions
 
 ```{r}
-test %>% 
-  filter(is_correct == 0) %>% nrow()/nrow(test)
+participant_dropped_test =
+  test %>% 
+  filter(drop_participant_rt == 0) %>% 
+  filter(drop_participant_acc == 0)
+
+participant_dropped_test %>% 
+  filter(is_correct == 0) %>% nrow()/nrow(participant_dropped_test)
 ```
 
 

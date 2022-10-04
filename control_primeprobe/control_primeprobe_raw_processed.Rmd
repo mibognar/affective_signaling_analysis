@@ -236,6 +236,14 @@ test %>%
 
 ```
 
+# all participant exclusion counts
+```{r}
+test %>%
+  group_by(participant_id, drop_participant_rt, drop_participant_acc) %>%
+  count() %>%
+  group_by(drop_participant_rt, drop_participant_acc) %>%
+  count()
+```
 
 # Exclude participants younger than 18 or older than 99
 
