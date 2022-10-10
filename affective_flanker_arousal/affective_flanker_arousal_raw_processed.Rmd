@@ -295,9 +295,13 @@ unfiltered_test = test
 test = outlier_detection(unfiltered_test,trial_sd_cut = 2,participant_sd_cut = 9, participant_id, is_congruent, is_prev_cong)
 cohen_effect_analysis = outlier_detection(unfiltered_test, trial_sd_cut = 2,participant_sd_cut = 9, participant_id, is_congruent, is_prev_cong, n_min3_cong)
 
+sequential_cse = outlier_detection(unfiltered_test, trial_sd_cut = 2.5, participant_sd_cut = 9, participant_id, is_congruent, n_min3_cong)
+
 threeway_interaction_analysis = unfiltered_test %>% 
   filter(!is.na(n_min4_arousal))
-threeway_interaction_analysis = outlier_detection(threeway_interaction_analysis, trial_sd_cut = 4,participant_sd_cut = 2.5, participant_id, is_congruent, is_prev_cong, n_min3_cong, n_min4_arousal)
+threeway_interaction_analysis = outlier_detection(threeway_interaction_analysis, trial_sd_cut = 4,participant_sd_cut = 2.5, participant_id, is_congruent, n_min3_cong, n_min4_arousal)
+
+threeway_between_analysis = outlier_detection(unfiltered_test, trial_sd_cut = 2, participant_sd_cut = 9, participant_id, is_congruent, n_min3_cong, is_prev_cong)
 
 ```
 
@@ -311,6 +315,8 @@ threeway_interaction_analysis = outlier_detection(threeway_interaction_analysis,
 response_rt_analysis = global_exclusion(test)
 cohen_effect_analysis = global_exclusion(cohen_effect_analysis, T)
 threeway_interaction_analysis = global_exclusion(threeway_interaction_analysis, T)
+sequential_cse = global_exclusion(sequential_cse, T)
+threeway_between_analysis = global_exclusion(threeway_between_analysis, T)
 ```
 
 ```{r participant level exclusion}
@@ -384,6 +390,9 @@ write_tsv(cohen_effect_analysis, file.path(current_version, "data", "Processed",
 
 write_tsv(threeway_interaction_analysis, file.path(current_version, "data", "Processed", "flanker_arousal_threeway_interaction_analysis.tsv"))
 
+write_tsv(sequential_cse, file.path(current_version,"data","Processed", "sequential_cse_processed.tsv"))
+
+write_tsv(threeway_between_analysis, file.path(current_version,"data","Processed", "threeway_between_processed.tsv"))
 
 ```
 

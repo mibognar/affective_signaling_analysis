@@ -310,6 +310,88 @@ Bf(sd = test_model$coefficients[7],
 
 ## Exploratory sequential effect analysis
 
+```{r}
+sequential_cse_data = read_tsv(file.path(current_version, "data", "Processed", "sequential_cse_processed.tsv"))
+
+sequential_cse_model = lmer(rt ~ n_min3_cong * is_congruent + (1+is_congruent|participant_id), sequential_cse_data)
+sequential_cse_summary = summary(sequential_cse_model)
+sequential_cse_summary
+```
+
+
+
+```{r}
+# congruency effect
+
+Bf(sd = sequential_cse_summary$coefficients[7],
+   obtained = sequential_cse_summary$coefficients[3]*-1,
+   dfdata = sequential_cse_summary$coefficients[11],
+   meanoftheory = 0,
+   sdtheory = 60,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+```{r}
+# congruency sequence effect
+
+Bf(sd = sequential_cse_summary$coefficients[8],
+   obtained = sequential_cse_summary$coefficients[4]*-1,
+   dfdata = sequential_cse_summary$coefficients[12],
+   meanoftheory = 0,
+   sdtheory = 11656,#1.1,#26.5, #needs RR
+   dftheory = 10^10,
+   tail = 1)
+```
+
+
+```{r}
+cse_predicted = sequential_cse_data %>% 
+  mutate(predicted_rt = predict(sequential_cse_model))
+
+sequential_cse_plot_data <- 
+  cse_predicted %>% 
+  mutate(n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
+                                 n_min3_cong ==  1L ~ "Congruent"),
+         is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent")) %>%
+  group_by(participant_id, is_congruent, n_min3_cong) %>% 
+  summarise(participant_mean_rt = mean(predicted_rt, na.rm = T)) %>% 
+  group_by(is_congruent, n_min3_cong) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+sequential_cse_plot <- 
+  sequential_cse_plot_data %>% 
+  ggplot() +
+  aes(x = n_min3_cong,
+                 y = mean_rt,
+                 color = is_congruent,
+                 group = is_congruent) +
+  geom_path() +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(850, 1100)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("congruency of previous trial")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+ papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )
+
+sequential_cse_plot
+```
 
 ```{r}
 cse_plot_rt_data_cohen <- 
@@ -369,10 +451,19 @@ cohen_effect_data = read_tsv(file.path(current_version, "data", "Processed", "fl
 
 
 cohen2_model = lmer(rt ~ n_min3_cong * is_prev_cong + (1+is_congruent|filename), data = cohen_effect_data)
+cohen_summary = summary(cohen2_model)
 summary(cohen2_model)
-
 ```
 
+```{r}
+Bf(sd = cohen_summary$coefficients[8],
+   obtained = cohen_summary$coefficients[4]*-1,
+   dfdata = cohen_summary$coefficients[12],
+   meanoftheory = 0,
+   sdtheory = 10,#1.1,#26.5, #needs RR
+   dftheory = 10^10,
+   tail = 1)
+```
 
 ```{r}
 cse_plot_3way_nmin4_data <- 
@@ -448,7 +539,7 @@ Bf(sd = threeway_summary$coefficients[16],
    obtained = threeway_summary$coefficients[8],
    dfdata = threeway_summary$coefficients[24],
    meanoftheory = 0,
-   sdtheory = 20,#7.4,#94.5 RRB>3 = [7.4, 94.5]
+   sdtheory = 10,#7.4,#70.6, RRB>3 = [7.4, 70.6]
    dftheory = 10^10,
    tail = 1)
 
@@ -511,3 +602,74 @@ cse_plot_3way_nmin4
 ggsave(file.path(current_version,"figures/cse_plot_3way_nmin4.png"), width = 14.4, height = 8, plot = cse_plot_3way_nmin4)
 ```
 
+```{r}
+threeway_between_data = read_tsv(file.path(current_version, "data", "Processed", "threeway_between_processed.tsv"))
+threeway_between_model = lmer(rt ~ is_congruent * n_min3_cong * is_prev_cong + (1+is_congruent|filename), data = threeway_between_data)
+threeway_between_summary = summary(threeway_between_model)
+threeway_between_summary
+```
+
+```{r}
+Bf(sd = threeway_between_summary$coefficients[16],
+   obtained = threeway_between_summary$coefficients[8]*-1,
+   dfdata = threeway_between_summary$coefficients[24],
+   meanoftheory = 0,
+   sdtheory = 4,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+
+```{r}
+threeway_between_predicted = threeway_between_data %>% 
+  mutate(predicted_rt = predict(threeway_between_model))
+
+cse_plot_3way_between_data <- 
+  threeway_between_predicted %>% 
+  mutate(is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent"),
+n_min3_cong = case_when(n_min3_cong ==  0L ~ "Incongruent",
+                                 n_min3_cong ==  1L ~ "Congruent"),
+is_prev_cong = case_when(is_prev_cong ==  0L ~ "Negative",
+                                  is_prev_cong ==  1L ~ "Neutral"),
+ is_prev_cong = fct_relevel(is_prev_cong, c("Neutral", "Negative")),)%>%
+  
+  group_by(participant_id, is_congruent, n_min3_cong, is_prev_cong) %>% 
+  summarise(participant_mean_rt = mean(predicted_rt, na.rm = T)) %>% 
+  group_by(is_congruent, n_min3_cong, is_prev_cong) %>% 
+  summarise(N = n(),
+            mean_rt = mean(participant_mean_rt, na.rm = T),
+            sd_rt = sd(participant_mean_rt, na.rm = T),
+            se_rt = sd_rt / sqrt(N))
+
+cse_plot_3way_between <- 
+  cse_plot_3way_between_data %>% 
+  ggplot() +
+  aes(x = n_min3_cong,
+                 y = mean_rt,
+                 color = is_congruent,
+      
+                 group = is_congruent) +
+  geom_path() +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_rt - se_rt,
+                    ymax = mean_rt + se_rt),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(650, 900)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("nmin3 congruency")+
+  ylab("Reaction time") +
+  guides(shape = guide_legend(title = "current congruency")) +
+  papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )+
+  facet_grid(cols = vars(is_prev_cong))
+
+cse_plot_3way_between
+```
