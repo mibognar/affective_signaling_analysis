@@ -17,6 +17,7 @@ pacman::p_load(tidyverse, osfr, janitor, lubridate, purrrlyr)
 ```{r load helper functions}
 source("../utils.R")
 source("../outlier_detection.R")
+source("../outlier_detection_acc.R")
 ```
 
 # Create local data structure
@@ -284,6 +285,7 @@ threeway_interaction_analysis = outlier_detection(threeway_interaction_analysis,
 
 threeway_between_analysis = outlier_detection(unfiltered_test, trial_sd_cut = 2, participant_sd_cut = 9, participant_id, is_congruent, n_min3_cong, is_prev_cong)
 
+accuracy_analysis = outlier_detection_acc(unfiltered_test,trial_sd_cut = 2.5, participant_sd_cut = 2.5, participant_id, is_congruent, is_prev_cong)
 
 ```
 
@@ -315,6 +317,8 @@ cohen_effect_analysis = global_exclusion(cohen_effect_analysis, T)
 threeway_interaction_analysis = global_exclusion(threeway_interaction_analysis, T)
 sequential_cse = global_exclusion(sequential_cse, T)
 threeway_between_analysis = global_exclusion(threeway_between_analysis, T)
+
+response_acc_analysis = global_exclusion_acc(accuracy_analysis, F)
 ```
 
 
@@ -330,5 +334,7 @@ write_tsv(threeway_interaction_analysis, file.path(current_version,"data","Proce
 write_tsv(sequential_cse, file.path(current_version,"data","Processed", "sequential_cse_processed.tsv"))
 
 write_tsv(threeway_between_analysis, file.path(current_version,"data","Processed", "threeway_between_processed.tsv"))
+
+write_tsv(response_acc_analysis, file.path(current_version,"data","Processed", "response_acc_processed.tsv"))
 ```
 

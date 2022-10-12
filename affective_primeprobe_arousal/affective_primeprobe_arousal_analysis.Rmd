@@ -555,3 +555,85 @@ cse_plot_3way_between
 ```
 
 
+# Accuracy analysis
+
+```{r}
+acc_processed = read_tsv(file.path(current_version, "data", "Processed", "response_acc_processed.tsv"))
+affective_model = glmer(as.factor(is_correct) ~ as.factor(is_prev_cong) * as.factor(is_congruent) + (1| participant_id), acc_processed, family = binomial)
+
+affective_summary = summary(affective_model)
+summary(affective_model)
+```
+
+```{r}
+Bf(sd = affective_summary$coefficients[8],
+   obtained = affective_summary$coefficients[4],
+   dfdata = 46943,
+   meanoftheory = 0,
+   sdtheory = 0.1,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+```{r}
+Bf(sd = affective_summary$coefficients[7],
+   obtained = affective_summary$coefficients[3],
+   dfdata = 46943,
+   meanoftheory = 0,
+   sdtheory = 0.2,
+   dftheory = 10^10,
+   tail = 1)
+```
+
+```{r}
+accuracy_predicted = acc_processed %>% 
+  mutate(predicted_acc = predict(affective_model, type="response"))
+
+accuracy_cse_data <- 
+  accuracy_predicted %>% 
+  mutate(is_congruent = case_when(is_congruent ==  0L ~ "Incongruent",
+                                 is_congruent ==  1L ~ "Congruent"),
+is_prev_cong = case_when(is_prev_cong ==  0L ~ "High arousal",
+                                  is_prev_cong ==  1L ~ "Low arousal"),
+ is_prev_cong = fct_relevel(is_prev_cong, c("Low arousal", "High arousal")),)%>%
+  
+  group_by(participant_id, is_congruent, is_prev_cong) %>% 
+  summarise(participant_mean_acc = mean(predicted_acc, na.rm = T)) %>% 
+  group_by(is_congruent,  is_prev_cong) %>% 
+  summarise(N = n(),
+            mean_acc = mean(participant_mean_acc, na.rm = T),
+            sd_acc = sd(participant_mean_acc, na.rm = T),
+            se_acc = sd_acc / sqrt(N))
+
+cse_plot_accuracy <- 
+  accuracy_cse_data %>% 
+  ggplot() +
+  aes(x = is_prev_cong,
+                 y = mean_acc,
+                 shape = is_congruent,
+      
+                 group = is_congruent) +
+  geom_path() +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_acc - se_acc,
+                    ymax = mean_acc + se_acc),
+                width = .1) +
+  scale_shape_manual(values = c(4, 16)) +
+  scale_y_continuous(limits = c(0.93, .98)) +
+  scale_x_discrete(expand = c(1, 0)) +
+  xlab("Arousal of the previous trial")+
+  ylab("Accuracy %") +
+  guides(shape = guide_legend(title = "Congruency of \n the current trial")) +
+  papaja::theme_apa() +
+  theme(legend.position = c(0.5,0.25),
+        legend.title = element_text(size= 26),
+        legend.text=element_text(size=24),
+        axis.line = element_line(color = "black",size=1),
+        axis.title = element_text(size=24),
+        axis.text = element_text(size=22)
+        )
+
+cse_plot_accuracy
+
+ggsave(file.path(current_version, "figures/accuracy_plot.png"), width = 14.4, height = 8, plot = last_plot())
+```
